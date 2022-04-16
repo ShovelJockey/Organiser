@@ -10,6 +10,8 @@ class OrganiserApp():
         self.root = Tk()
         self.DBmng = models.DBmaker('sqlite:///organiser.db')
         self.current_table = None
+        self.current_profile_name = None
+        self.profile = None
     
 
     def app_running(self):
@@ -18,14 +20,18 @@ class OrganiserApp():
         self.table_select_window()
         self.date_check()
         ttk.Label(frm, text="Welcome to my organiser app").grid(column=0, row=0)
-        ttk.Button(frm, text="Show tasks", command=lambda:[self.root.withdraw(), self.show_task()]).grid(column=0, row=1)
-        ttk.Button(frm, text="Show all urgent tasks", command=lambda:[self.root.withdraw(), self.urgent_task()]).grid(column=0, row=2)
-        ttk.Button(frm, text="Add a new task", command=lambda:[self.root.withdraw(), self.add_task_window()]).grid(column=0, row=3)
-        ttk.Button(frm, text="Delete a task", command=lambda:[self.root.withdraw(), self.delete_task_window()]).grid(column=0, row=4)
-        ttk.Button(frm, text="Edit a task", command=lambda:[self.root.withdraw(), self.edit_task_select()]).grid(column=0, row=5)
-        ttk.Button(frm, text="Select or create new profile", command=lambda:[self.deselect_current_table(), self.table_select_window()]).grid(column=0, row=6)
-        ttk.Button(frm, text="Delete existing profile", command=lambda:[self.root.withdraw(), self.delete_table_window()]).grid(column=0, row=7)
-        ttk.Button(frm, text="Quit", command=self.root.destroy).grid(column=1, row=8)
+        ttk.Label(frm, text="Current profile:").grid(column=0, row=1)
+        self.profile = ttk.Label(frm, text=self.current_profile_name)
+        self.profile.grid(column=1, row=1)
+        ttk.Button(frm, text="Show tasks", command=lambda:[self.root.withdraw(), self.show_task()]).grid(column=0, row=2)
+        ttk.Button(frm, text="Show all urgent tasks", command=lambda:[self.root.withdraw(), self.urgent_task()]).grid(column=0, row=3)
+        ttk.Button(frm, text="Add a new task", command=lambda:[self.root.withdraw(), self.add_task_window()]).grid(column=0, row=4)
+        ttk.Button(frm, text="Delete a task", command=lambda:[self.root.withdraw(), self.delete_task_window()]).grid(column=0, row=5)
+        ttk.Button(frm, text="Edit a task", command=lambda:[self.root.withdraw(), self.edit_task_select()]).grid(column=0, row=6)
+        ttk.Button(frm, text="Select or create new profile", command=lambda:[self.deselect_current_table(), self.table_select_window()]).grid(column=0, row=7)
+        ttk.Button(frm, text="Delete existing profile", command=lambda:[self.root.withdraw(), self.delete_table_window()]).grid(column=0, row=8)
+        ttk.Button(frm, text="Quit", command=self.root.destroy).grid(column=1, row=9)
+        self.root.after(1000, self.profile_name_update())
         self.root.mainloop()
 
 
@@ -55,7 +61,7 @@ class OrganiserApp():
         x = 1
         for table in tables:
             ttk.Label(frm, text=table).grid(column=0, row=x)
-            ttk.Button(frm, text='Select', command=lambda table=table:[task_window.destroy(), parent.destroy(), self.assign_current_table(table), self.root.deiconify()]).grid(column=1, row=x)
+            ttk.Button(frm, text='Select', command=lambda table=table:[task_window.destroy(), parent.destroy(), self.assign_current_table(table), self.profile_name_update(), self.root.deiconify()]).grid(column=1, row=x)
             x += 1
         ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), parent.deiconify()]).grid(column=0, row=x)
         task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.destroy()])
@@ -316,6 +322,11 @@ class OrganiserApp():
         else:
             messagebox.showinfo(message="Profile created!")
 
+
+    def profile_name_update(self):
+        if self.current_table:
+            self.current_profile_name = self.current_table.__tablename__
+            self.profile.configure(text = self.current_profile_name)
 
 if __name__ == '__main__':
     app = OrganiserApp()
