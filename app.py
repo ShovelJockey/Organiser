@@ -98,12 +98,15 @@ class OrganiserApp():
         confirm = messagebox.askyesno(message=f"Are you sure you want to delete user profile: '{table_name}'", title="Delete profile?")
         if confirm:
             table_to_del = self.DBmng.get_model(table_name)
+            parent.destroy()
             if table_to_del.__tablename__ == self.current_table.__tablename__:
                 self.deselect_current_table()
             table_to_del.__table__.drop(models.engine)
-            parent.destroy()
             messagebox.showinfo(message="Profile deleted")
-            self.table_select_window()
+            if self.current_table:
+                self.root.deiconify()
+            else:
+                self.table_select_window()
         else:
             self.return_win(parent)
 
