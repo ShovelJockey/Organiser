@@ -106,7 +106,9 @@ class OrganiserApp():
         task_window = Toplevel(self.root)
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
-        x = 0
+        if models.session.query(self.current_table).count() == 0:
+            ttk.Label(frm, text="Currently no tasks for this profile").grid(column=0, row=0)
+        x = 1
         for reminder in models.session.query(self.current_table):
             ttk.Label(frm, text=reminder).grid(column=0, row=x)
             x += 1
