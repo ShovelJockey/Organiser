@@ -68,7 +68,7 @@ class OrganiserApp():
         new_table_name = StringVar()
         ttk.Label(frm, text="Enter a new profile name").grid(column=0, row=0)
         ttk.Entry(frm, textvariable=new_table_name).grid(column=1, row=0)
-        ttk.Button(frm, text="Confirm", command=lambda:[task_window.destroy(), parent.destroy(), self.profile_creation_msg(new_table_name.get()), self.DBmng.create_models(new_table_name.get()), self.root.deiconify(), self.assign_current_table(new_table_name.get())]).grid(column=0, row=1)
+        ttk.Button(frm, text="Confirm", command=lambda:[task_window.destroy(), parent.destroy(), self.profile_creation_msg(new_table_name.get()), self.DBmng.create_models(new_table_name.get()), self.assign_current_table(new_table_name.get()), self.root.deiconify()]).grid(column=0, row=1)
         ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), parent.deiconify()]).grid(column=1, row=1)
         task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.destroy()])
 
@@ -92,7 +92,7 @@ class OrganiserApp():
         confirm = messagebox.askyesno(message=f"Are you sure you want to delete user profile: '{table_name}'", title="Delete profile?")
         if confirm:
             table_to_del = self.DBmng.get_model(table_name)
-            if table_to_del == self.current_table:
+            if table_to_del.__tablename__ == self.current_table.__tablename__:
                 self.deselect_current_table()
             table_to_del.__table__.drop(models.engine)
             parent.destroy()
