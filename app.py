@@ -18,7 +18,6 @@ class OrganiserApp():
         frm = ttk.Frame(self.root, padding=10)
         frm.grid()
         self.table_select_window()
-        self.date_check()
         ttk.Label(frm, text="Welcome to my organiser app").grid(column=0, row=0)
         ttk.Label(frm, text="Current profile:").grid(column=0, row=1)
         self.profile = ttk.Label(frm, text=self.current_profile_name)
@@ -61,7 +60,7 @@ class OrganiserApp():
         x = 1
         for table in tables:
             ttk.Label(frm, text=table).grid(column=0, row=x)
-            ttk.Button(frm, text='Select', command=lambda table=table:[task_window.destroy(), parent.destroy(), self.assign_current_table(table), self.profile_name_update(), self.root.deiconify()]).grid(column=1, row=x)
+            ttk.Button(frm, text='Select', command=lambda table=table:[task_window.destroy(), parent.destroy(), self.assign_current_table(table), self.profile_name_update(), self.date_check(), self.root.deiconify()]).grid(column=1, row=x)
             x += 1
         ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), parent.deiconify()]).grid(column=0, row=x)
         task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.destroy()])
