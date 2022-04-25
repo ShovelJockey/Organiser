@@ -25,11 +25,10 @@ class OrganiserApp():
         ttk.Button(frm, text="Show tasks", command=lambda:[self.root.withdraw(), self.show_task()]).grid(column=0, row=2)
         ttk.Button(frm, text="Show all urgent tasks", command=lambda:[self.root.withdraw(), self.urgent_task()]).grid(column=0, row=3)
         ttk.Button(frm, text="Add a new task", command=lambda:[self.root.withdraw(), self.add_task_window()]).grid(column=0, row=4)
-        ttk.Button(frm, text="Delete a task", command=lambda:[self.root.withdraw(), self.delete_task_window()]).grid(column=0, row=5)
-        ttk.Button(frm, text="Edit a task", command=lambda:[self.root.withdraw(), self.edit_task_select()]).grid(column=0, row=6)
-        ttk.Button(frm, text="Select or create new profile", command=lambda:[self.deselect_current_table(), self.table_select_window()]).grid(column=0, row=7)
-        ttk.Button(frm, text="Delete existing profile", command=lambda:[self.root.withdraw(), self.delete_table_window()]).grid(column=0, row=8)
-        ttk.Button(frm, text="Quit", command=self.root.destroy).grid(column=1, row=9)
+        ttk.Button(frm, text="Delete or Edit a task", command=lambda:[self.root.withdraw(), self.edit_delete_task_window()]).grid(column=0, row=5)
+        ttk.Button(frm, text="Select or create new profile", command=lambda:[self.deselect_current_table(), self.table_select_window()]).grid(column=0, row=6)
+        ttk.Button(frm, text="Delete existing profile", command=lambda:[self.root.withdraw(), self.delete_table_window()]).grid(column=0, row=7)
+        ttk.Button(frm, text="Quit", command=self.root.destroy).grid(column=1, row=8)
         self.root.after(1000, self.profile_name_update())
         self.root.mainloop()
 
@@ -161,7 +160,7 @@ class OrganiserApp():
                 self.return_win(parent)
 
 
-    def delete_task_window(self):
+    def edit_delete_task_window(self):
         task_window = Toplevel(self.root)
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
@@ -169,7 +168,8 @@ class OrganiserApp():
         x = 1
         for task in models.session.query(self.current_table):
             ttk.Label(frm, text=task).grid(column=0, row=x)
-            ttk.Button(frm, text='Delete', command=lambda task=task:[task_window.withdraw(), self.delete_task(task, task_window)]).grid(column=1, row=x)
+            ttk.Button(frm, text='Edit', command=lambda task=task:[task_window.withdraw(), self.edit_task(task, task_window)]).grid(column=1, row=x)
+            ttk.Button(frm, text='Delete', command=lambda task=task:[task_window.withdraw(), self.delete_task(task, task_window)]).grid(column=2, row=x)
             x +=1
         ttk.Button(frm, text='Return', command=lambda:[task_window.destroy(), self.root.deiconify()]).grid(column=0, row=x)
         task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
@@ -186,22 +186,8 @@ class OrganiserApp():
         else:
             self.return_win(parent)
 
-
-    def edit_task_select(self):
-        task_window = Toplevel(self.root)
-        frm = ttk.Frame(task_window, padding=10)
-        frm.grid()
-        ttk.Label(frm, text="Choose a task to edit").grid(column=0, row=0)
-        x = 1
-        for task in models.session.query(self.current_table):
-            ttk.Label(frm, text=task).grid(column=0, row=x)
-            ttk.Button(frm, text='Edit', command=lambda task=task:[task_window.withdraw(), self.edit_task_window(task, task_window)]).grid(column=1, row=x)
-            x +=1
-        ttk.Button(frm, text='Return', command=lambda:[task_window.destroy(), self.root.deiconify()]).grid(column=0, row=x)
-        task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
-
     
-    def edit_task_window(self, task, parent):
+    def edit_task(self, task, parent):
         task_window = Toplevel(self.root)
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
@@ -306,7 +292,8 @@ class OrganiserApp():
 
 
     def simple_date(self, deadline):
-        deadline = deadline.strftime("%d/%m/%Y")
+        if deadline:
+            deadline = deadline.strftime("%d/%m/%Y")
         return deadline
 
     
@@ -329,6 +316,8 @@ class OrganiserApp():
         if self.current_table:
             self.current_profile_name = self.current_table.__tablename__
             self.profile.configure(text = self.current_profile_name)
+
+
 
 if __name__ == '__main__':
     app = OrganiserApp()
