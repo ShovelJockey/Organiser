@@ -9,6 +9,7 @@ class OrganiserApp():
 
     def __init__(self):
         self.root = Tk()
+        self.root.title("Organiser")
         self.DBmng = models.DBmaker('sqlite:///organiser.db')
         self.current_table = None
         self.current_profile_name = StringVar()
