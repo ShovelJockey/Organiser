@@ -1,6 +1,7 @@
 import models
 from datetime import datetime, timedelta
 from tkinter import Tk, ttk, Toplevel, StringVar, messagebox
+from tkcalendar import Calendar
 
 
 class OrganiserApp():
@@ -22,12 +23,36 @@ class OrganiserApp():
         ttk.Label(frm, textvariable=self.current_profile_name).grid(column=1, row=1)
         ttk.Button(frm, text="Show tasks", command=lambda:[self.root.withdraw(), self.show_task()]).grid(column=0, row=2)
         ttk.Button(frm, text="Show all urgent tasks", command=lambda:[self.root.withdraw(), self.urgent_task()]).grid(column=0, row=3)
-        ttk.Button(frm, text="Add a new task", command=lambda:[self.root.withdraw(), self.add_task_window()]).grid(column=0, row=4)
-        ttk.Button(frm, text="Delete or Edit a task", command=lambda:[self.root.withdraw(), self.edit_delete_task_window()]).grid(column=0, row=5)
-        ttk.Button(frm, text="Select or create new profile", command=lambda:[self.deselect_current_table(), self.table_select_window()]).grid(column=0, row=6)
-        ttk.Button(frm, text="Delete existing profile", command=lambda:[self.root.withdraw(), self.delete_table_window()]).grid(column=0, row=7)
-        ttk.Button(frm, text="Quit", command=self.root.destroy).grid(column=1, row=8)
+        ttk.Button(frm, text="Calendar", command=lambda:[self.root.withdraw(), self.calendar_view()]).grid(column=0, row=4)
+        ttk.Button(frm, text="Add a new task", command=lambda:[self.root.withdraw(), self.add_task_window()]).grid(column=0, row=5)
+        ttk.Button(frm, text="Delete or Edit a task", command=lambda:[self.root.withdraw(), self.edit_delete_task_window()]).grid(column=0, row=6)
+        ttk.Button(frm, text="Select or create new profile", command=lambda:[self.deselect_current_table(), self.table_select_window()]).grid(column=0, row=7)
+        ttk.Button(frm, text="Delete existing profile", command=lambda:[self.root.withdraw(), self.delete_table_window()]).grid(column=0, row=8)
+        ttk.Button(frm, text="Quit", command=self.root.destroy).grid(column=1, row=9)
         self.root.mainloop()
+
+
+    def calendar_view(self):
+        def pass_date(i):
+            self.cal_tasks(cal.get_date(), tasks)
+        task_window = Toplevel(self.root)
+        date = StringVar(task_window, Calendar.date.today().strftime("%d/%m/%y"))
+        tasks = StringVar(task_window)
+        cal = Calendar(task_window, selectmode='day', textvariable=date)
+        cal.pack()
+        ttk.Label(task_window, textvariable=date).pack(padx=10, pady=10)
+        ttk.Label(task_window, textvariable=tasks).pack(padx=10, pady=10)
+        ttk.Button(task_window, text="Return", command=lambda:[task_window.destroy(), self.root.deiconify()]).pack(padx=10, pady=10)
+        cal.bind("<<CalendarSelected>>", pass_date)
+        task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.destroy()])
+
+
+    def cal_tasks(self, date, tasks_str):
+        date = datetime.strptime(date, "%d/%m/%Y").date()
+        tasks = ""
+        for model in models.session.query(self.current_table).filter_by(deadline=date):
+            tasks = tasks + model.task_type + " " + model.description + "\n"
+        tasks_str.set(tasks)
 
 
     def table_select_window(self):
