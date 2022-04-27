@@ -16,43 +16,51 @@ class OrganiserApp():
     
 
     def app_running(self):
+        self.win_geometry(300, 400, self.root)
         frm = ttk.Frame(self.root, padding=10)
         frm.grid()
         self.table_select_window()
-        ttk.Label(frm, text="Welcome to my organiser app").grid(column=0, row=0)
-        ttk.Label(frm, text="Current profile:").grid(column=0, row=1)
-        ttk.Label(frm, textvariable=self.current_profile_name).grid(column=1, row=1)
-        ttk.Button(frm, text="Show tasks", command=lambda:[self.root.withdraw(), self.show_task()]).grid(column=0, row=2)
-        ttk.Button(frm, text="Show all urgent tasks", command=lambda:[self.root.withdraw(), self.urgent_task()]).grid(column=0, row=3)
-        ttk.Button(frm, text="Calendar", command=lambda:[self.root.withdraw(), self.calendar_view()]).grid(column=0, row=4)
-        ttk.Button(frm, text="Add a new task", command=lambda:[self.root.withdraw(), self.add_task_window()]).grid(column=0, row=5)
-        ttk.Button(frm, text="Delete or Edit a task", command=lambda:[self.root.withdraw(), self.edit_delete_task_window()]).grid(column=0, row=6)
-        ttk.Button(frm, text="Select or create new profile", command=lambda:[self.deselect_current_table(), self.table_select_window()]).grid(column=0, row=7)
-        ttk.Button(frm, text="Delete existing profile", command=lambda:[self.root.withdraw(), self.delete_table_window()]).grid(column=0, row=8)
-        ttk.Button(frm, text="Quit", command=self.root.destroy).grid(column=1, row=9)
+        ttk.Label(frm, text="Welcome to my organiser app").grid(column=0, row=0, padx=5, pady=5)
+        ttk.Label(frm, text="Current profile:").grid(column=0, row=1, padx=5, pady=5)
+        ttk.Label(frm, textvariable=self.current_profile_name).grid(column=1, row=1, padx=5, pady=5)
+        ttk.Button(frm, text="Show tasks", command=lambda:[self.root.withdraw(), self.show_task()]).grid(column=0, row=2, padx=5, pady=5)
+        ttk.Button(frm, text="Show all urgent tasks", command=lambda:[self.root.withdraw(), self.urgent_task()]).grid(column=0, row=3, padx=5, pady=5)
+        ttk.Button(frm, text="Calendar", command=lambda:[self.root.withdraw(), self.calendar_view()]).grid(column=0, row=4, padx=5, pady=5)
+        ttk.Button(frm, text="Add a new task", command=lambda:[self.root.withdraw(), self.add_task_window()]).grid(column=0, row=5, padx=5, pady=5)
+        ttk.Button(frm, text="Delete or Edit a task", command=lambda:[self.root.withdraw(), self.edit_delete_task_window()]).grid(column=0, row=6, padx=5, pady=5)
+        ttk.Button(frm, text="Select or create new profile", command=lambda:[self.deselect_current_table(), self.table_select_window()]).grid(column=0, row=7, padx=5, pady=5)
+        ttk.Button(frm, text="Delete existing profile", command=lambda:[self.root.withdraw(), self.delete_table_window()]).grid(column=0, row=8, padx=5, pady=5)
+        ttk.Button(frm, text="Quit", command=self.root.destroy).grid(column=0, row=9, padx=5, pady=5)
         self.root.mainloop()
 
 
     def calendar_view(self):
         def pass_date(i):
             self.cal_tasks(cal.get_date(), tasks)
-        task_window = Toplevel(self.root)
-        date = StringVar(task_window, Calendar.date.today().strftime("%d/%m/%y"))
-        tasks = StringVar(task_window)
-        cal = Calendar(task_window, selectmode='day', textvariable=date)
+        global cal_window
+        cal_window = Toplevel(self.root)
+        self.win_geometry(300, 400, cal_window)
+        date = StringVar(cal_window, Calendar.date.today().strftime("%d/%m/%y"))
+        tasks = StringVar(cal_window)
+        cal = Calendar(cal_window, selectmode='day', textvariable=date)
         cal.pack()
-        ttk.Label(task_window, textvariable=date).pack(padx=10, pady=10)
-        ttk.Label(task_window, textvariable=tasks).pack(padx=10, pady=10)
-        ttk.Button(task_window, text="Return", command=lambda:[task_window.destroy(), self.root.deiconify()]).pack(padx=10, pady=10)
+        ttk.Label(cal_window, textvariable=date).pack(padx=10, pady=10)
+        ttk.Label(cal_window, text="Tasks for this date:").pack(padx=5, pady=5)
+        ttk.Label(cal_window, textvariable=tasks).pack(padx=5, pady=5)
+        ttk.Button(cal_window, text="Add task to this date", command=lambda:[cal_window.withdraw(), self.add_task_window(cal.get_date())]).pack(padx=5, pady=5)
+        ttk.Button(cal_window, text="Return", command=lambda:[cal_window.destroy(), self.root.deiconify()]).pack(padx=10, pady=10)
         cal.bind("<<CalendarSelected>>", pass_date)
-        task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.destroy()])
+        cal_window.protocol("WM_DELETE_WINDOW", lambda:[cal_window.destroy(), self.root.destroy()])
 
 
     def cal_tasks(self, date, tasks_str):
         date = datetime.strptime(date, "%d/%m/%Y").date()
-        tasks = ""
-        for model in models.session.query(self.current_table).filter_by(deadline=date):
-            tasks = tasks + model.task_type + " " + model.description + "\n"
+        if models.session.query(self.current_table).filter_by(deadline=date).count() > 0:
+            tasks = ""
+            for model in models.session.query(self.current_table).filter_by(deadline=date):
+                tasks = tasks + "-" + model.task_type + ", " + model.description + "\n"
+        else:
+            tasks = "No tasks"
         tasks_str.set(tasks)
 
 
@@ -60,22 +68,24 @@ class OrganiserApp():
         if self.current_table == None:
             self.root.withdraw()
             task_window = Toplevel(self.root)
+            self.win_geometry(300, 400, task_window)
             frm = ttk.Frame(task_window, padding=10)
             frm.grid()
             if self.DBmng.get_table_names():
-                ttk.Label(frm, text="Select a user profile or create a new one").grid(column=0, row=0)
-                ttk.Button(frm, text="Select existing profile", command=lambda:[task_window.withdraw, self.select_table(task_window)]).grid(column=0, row=1)
-                ttk.Button(frm, text="Create new profile", command=lambda:[task_window.withdraw(), self.create_table(task_window)]).grid(column=0, row=2)
+                ttk.Label(frm, text="Select a user profile or create a new one").grid(column=0, row=0, padx=5, pady=5)
+                ttk.Button(frm, text="Select existing profile", command=lambda:[task_window.withdraw, self.select_table(task_window)]).grid(column=0, row=1, padx=5, pady=5)
+                ttk.Button(frm, text="Create new profile", command=lambda:[task_window.withdraw(), self.create_table(task_window)]).grid(column=0, row=2, padx=5, pady=5)
             else:
-                ttk.Label(frm, text="No user profiles detected please create a new profile").grid(column=0, row=0)
-                ttk.Button(frm, text="Create new profile", command=lambda:[task_window.withdraw(), self.create_table(task_window)]).grid(column=0, row=1)
-            ttk.Button(frm, text="Quit", command=lambda:[task_window.destroy(), self.root.destroy()]).grid(column=1, row=6)
+                ttk.Label(frm, text="No user profiles detected please create a new profile").grid(column=0, row=0, padx=5, pady=5)
+                ttk.Button(frm, text="Create new profile", command=lambda:[task_window.withdraw(), self.create_table(task_window)]).grid(column=0, row=1, padx=5, pady=5)
+            ttk.Button(frm, text="Quit", command=lambda:[task_window.destroy(), self.root.destroy()]).grid(column=0, row=6, padx=5, pady=5)
             task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.destroy()])
         
 
     def select_table(self, parent):
         tables = self.DBmng.get_table_names()
         task_window = Toplevel(self.root)
+        self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
         ttk.Label(frm, text="Select one of the existing profiles").grid(column=0, row=0)
@@ -90,6 +100,7 @@ class OrganiserApp():
 
     def create_table(self, parent):
         task_window = Toplevel(self.root)
+        self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
         new_table_name = StringVar()
@@ -103,6 +114,7 @@ class OrganiserApp():
     def delete_table_window(self):
         tables = self.DBmng.get_table_names()
         task_window = Toplevel(self.root)
+        self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
         ttk.Label(frm, text="Select a profile to delete").grid(column=0, row=0)
@@ -134,6 +146,7 @@ class OrganiserApp():
 
     def show_task(self):
         task_window = Toplevel(self.root)
+        self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
         if models.session.query(self.current_table).count() == 0:
@@ -146,13 +159,15 @@ class OrganiserApp():
         task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
         
 
-    def add_task_window(self):
+    def add_task_window(self, cal_deadline=""):
         task_window = Toplevel(self.root)
+        self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
         new_task_type = StringVar()
         new_task_description = StringVar()
         new_task_deadline = StringVar()
+        new_task_deadline.set(cal_deadline)
         ttk.Label(frm, text="Add a new task").grid(column=0, row=0)
         ttk.Label(frm, text="Enter what type of task").grid(column=0, row=1)
         ttk.Entry(frm, textvariable=new_task_type).grid(column=1, row=1)
@@ -178,13 +193,17 @@ class OrganiserApp():
                 models.session.commit()
                 parent.destroy()
                 messagebox.showinfo(message="Task added!")
-                self.root.deiconify()
+                if cal_window.winfo_exists():
+                    cal_window.deiconify()
+                else:
+                    self.root.deiconify()
             else:
                 self.return_win(parent)
 
 
     def edit_delete_task_window(self):
         task_window = Toplevel(self.root)
+        self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
         ttk.Label(frm, text="Choose a task to delete").grid(column=0, row=0)
@@ -212,6 +231,7 @@ class OrganiserApp():
     
     def edit_task(self, task, parent):
         task_window = Toplevel(self.root)
+        self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
         edited_task_type = StringVar()
@@ -261,6 +281,7 @@ class OrganiserApp():
         urgent_time = urgent_time.date()
         current_time = datetime.now().date()
         task_window = Toplevel(self.root)
+        self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
         x = 0
@@ -291,6 +312,7 @@ class OrganiserApp():
             current_date = datetime.now().date()
             if len(list(models.session.query(self.current_table).filter(self.current_table.deadline.isnot(None)).filter(self.current_table.deadline < current_date))):
                 task_window = Toplevel(self.root)
+                self.win_geometry(300, 400, task_window)
                 frm = ttk.Frame(task_window, padding=10)
                 frm.grid()
                 x = 0
@@ -338,6 +360,14 @@ class OrganiserApp():
     def profile_name_update(self):
         if self.current_table:
             self.current_profile_name.set(self.current_table.__tablename__)
+
+
+    def win_geometry(self, width, height, window):
+        sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+        x = (sw/2) - (width/2)
+        y = (sh/2) - (height/2)
+        return window.geometry('+%d+%d' % (x, y))
 
 
 
