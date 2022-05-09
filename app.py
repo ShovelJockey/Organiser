@@ -136,10 +136,13 @@ class OrganiserApp():
                 self.deselect_current_table()
             table_to_del.__table__.drop(models.engine)
             messagebox.showinfo(message="Profile deleted")
-            if self.current_table:
-                self.root.deiconify()
+            try:
+                if cal_window.winfo_exists():
+                    cal_window.deiconify()
+            except NameError:
+                pass
             else:
-                self.table_select_window()
+                self.root.deiconify()
         else:
             self.return_win(parent)
 
@@ -193,8 +196,11 @@ class OrganiserApp():
                 models.session.commit()
                 parent.destroy()
                 messagebox.showinfo(message="Task added!")
-                if cal_window.winfo_exists():
-                    cal_window.deiconify()
+                try:
+                    if cal_window.winfo_exists():
+                        cal_window.deiconify()
+                except NameError:
+                    pass
                 else:
                     self.root.deiconify()
             else:
@@ -319,7 +325,7 @@ class OrganiserApp():
                 for reminder in models.session.query(self.current_table).filter(self.current_table.deadline.isnot(None)).filter(self.current_table.deadline < current_date):
                     ttk.Label(frm, text=f"{reminder.description} is scheduled to have already happened would you like to delete or edit this entry?").grid(column=0, row=x)
                     ttk.Button(frm, text='Edit task', command=lambda:[task_window.withdraw(), self.edit_task_window(reminder, task_window)]).grid(column=1, row=x)
-                    ttk.Button(frm, text='Delete task', command=lambda:[task_window.withdraw(), self.delete_task(reminder, task_window)]).grid(column=2, row=x)
+                    ttk.Button(frm, text='Delete task', command=lambda:[task_window.withdraw(), self.delete_task(reminder, task_window), self.date_check()]).grid(column=2, row=x)
                     x +=1
                 task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
