@@ -136,13 +136,10 @@ class OrganiserApp():
                 self.deselect_current_table()
             table_to_del.__table__.drop(models.engine)
             messagebox.showinfo(message="Profile deleted")
-            try:
-                if cal_window.winfo_exists():
-                    cal_window.deiconify()
-            except NameError:
-                pass
-            else:
+            if self.current_table:
                 self.root.deiconify()
+            else:
+                self.table_select_window()
         else:
             self.return_win(parent)
 
