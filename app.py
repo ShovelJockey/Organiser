@@ -26,8 +26,8 @@ class OrganiserApp():
         ttk.Button(frm, text="Show tasks", command=lambda:[self.root.withdraw(), self.show_task()]).grid(column=0, row=2, padx=5, pady=5)
         ttk.Button(frm, text="Show all urgent tasks", command=lambda:[self.root.withdraw(), self.urgent_task()]).grid(column=0, row=3, padx=5, pady=5)
         ttk.Button(frm, text="Calendar", command=lambda:[self.root.withdraw(), self.calendar_view()]).grid(column=0, row=4, padx=5, pady=5)
-        ttk.Button(frm, text="Add a new task", command=lambda:[self.root.withdraw(), self.add_task_window()]).grid(column=0, row=5, padx=5, pady=5)
-        ttk.Button(frm, text="Delete or Edit a task", command=lambda:[self.root.withdraw(), self.edit_delete_task_window()]).grid(column=0, row=6, padx=5, pady=5)
+        ttk.Button(frm, text="Add a new task", command=lambda:[self.root.withdraw(), self.add_task_window(self.root)]).grid(column=0, row=5, padx=5, pady=5)
+        ttk.Button(frm, text="Delete or Edit a task", command=lambda:[self.root.withdraw(), self.edit_delete_task_window(self.root)]).grid(column=0, row=6, padx=5, pady=5)
         ttk.Button(frm, text="Select or create new profile", command=lambda:[self.deselect_current_table(), self.table_select_window()]).grid(column=0, row=7, padx=5, pady=5)
         ttk.Button(frm, text="Delete existing profile", command=lambda:[self.root.withdraw(), self.delete_table_window()]).grid(column=0, row=8, padx=5, pady=5)
         ttk.Button(frm, text="Quit", command=self.root.destroy).grid(column=0, row=9, padx=5, pady=5)
@@ -37,7 +37,6 @@ class OrganiserApp():
     def calendar_view(self):
         def pass_date(i):
             self.cal_tasks(cal.get_date(), tasks)
-        global cal_window
         cal_window = Toplevel(self.root)
         self.win_geometry(300, 400, cal_window)
         date = StringVar(cal_window, Calendar.date.today().strftime("%d/%m/%y"))
@@ -47,7 +46,8 @@ class OrganiserApp():
         ttk.Label(cal_window, textvariable=date).pack(padx=10, pady=10)
         ttk.Label(cal_window, text="Tasks for this date:").pack(padx=5, pady=5)
         ttk.Label(cal_window, textvariable=tasks).pack(padx=5, pady=5)
-        ttk.Button(cal_window, text="Add task to this date", command=lambda:[cal_window.withdraw(), self.add_task_window(cal.get_date())]).pack(padx=5, pady=5)
+        ttk.Button(cal_window, text="Add task to this date", command=lambda:[cal_window.withdraw(), self.add_task_window(cal_window, cal.get_date())]).pack(padx=5, pady=5)
+        ttk.Button(cal_window, text="Edit or Delete task on this date", command=lambda:[cal_window.withdraw(), self.edit_delete_task_window(cal_window, self.date_clean(cal.get_date()))]).pack(padx=5, pady=5)
         ttk.Button(cal_window, text="Return", command=lambda:[cal_window.destroy(), self.root.deiconify()]).pack(padx=10, pady=10)
         cal.bind("<<CalendarSelected>>", pass_date)
         cal_window.protocol("WM_DELETE_WINDOW", lambda:[cal_window.destroy(), self.root.destroy()])
@@ -159,7 +159,7 @@ class OrganiserApp():
         task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
         
 
-    def add_task_window(self, cal_deadline=""):
+    def add_task_window(self, parent, cal_deadline=""):
         task_window = Toplevel(self.root)
         self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
@@ -175,12 +175,12 @@ class OrganiserApp():
         ttk.Entry(frm, textvariable=new_task_description).grid(column=1, row=2)
         ttk.Label(frm, text="Enter the task deadline, if it has one. Enter the date in numerical day-month-year format ie 22-07-1992").grid(column=0, row=3)
         ttk.Entry(frm, textvariable=new_task_deadline).grid(column=1, row=3)
-        ttk.Button(frm, text="Confirm", command=lambda:[task_window.withdraw(), self.confirm_add(new_task_type, new_task_description, new_task_deadline, task_window)]).grid(column=0, row=4)
-        ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.root.deiconify()]).grid(column=1, row=4)
+        ttk.Button(frm, text="Confirm", command=lambda:[task_window.withdraw(), self.confirm_add(new_task_type, new_task_description, new_task_deadline, task_window, parent)]).grid(column=0, row=4)
+        ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=1, row=4)
         task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
     
-    def confirm_add(self, new_task_type, task_description, task_deadline, parent):
+    def confirm_add(self, new_task_type, task_description, task_deadline, parent, grandparent):
         if not new_task_type.get() or not task_description.get():
             messagebox.showinfo(message="Sorry both the task type and task description are needed to create a new task.\nPlease enter values for these fields")
             parent.deiconify()
@@ -193,46 +193,51 @@ class OrganiserApp():
                 models.session.commit()
                 parent.destroy()
                 messagebox.showinfo(message="Task added!")
-                try:
-                    if cal_window.winfo_exists():
-                        cal_window.deiconify()
-                except NameError:
-                    pass
-                else:
-                    self.root.deiconify()
+                grandparent.deiconify()
             else:
                 self.return_win(parent)
 
 
-    def edit_delete_task_window(self):
+    def edit_delete_task_window(self, parent, cal_date=None):
         task_window = Toplevel(self.root)
         self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
         ttk.Label(frm, text="Choose a task to delete").grid(column=0, row=0)
         x = 1
-        for task in models.session.query(self.current_table):
-            ttk.Label(frm, text=task).grid(column=0, row=x)
-            ttk.Button(frm, text='Edit', command=lambda task=task:[task_window.withdraw(), self.edit_task(task, task_window)]).grid(column=1, row=x)
-            ttk.Button(frm, text='Delete', command=lambda task=task:[task_window.withdraw(), self.delete_task(task, task_window)]).grid(column=2, row=x)
-            x +=1
-        ttk.Button(frm, text='Return', command=lambda:[task_window.destroy(), self.root.deiconify()]).grid(column=0, row=x)
+        if cal_date is None:
+            for task in models.session.query(self.current_table):
+                ttk.Label(frm, text=task).grid(column=0, row=x)
+                ttk.Button(frm, text='Edit', command=lambda task=task:[task_window.withdraw(), self.edit_task(task, task_window, parent)]).grid(column=1, row=x)
+                ttk.Button(frm, text='Delete', command=lambda task=task:[task_window.withdraw(), self.delete_task(task, task_window, parent)]).grid(column=2, row=x)
+                x +=1
+        else:
+            for task in models.session.query(self.current_table).filter_by(deadline=cal_date):
+                ttk.Label(frm, text=task).grid(column=0, row=x)
+                ttk.Button(frm, text='Edit', command=lambda task=task:[task_window.withdraw(), self.edit_task(task, task_window, parent)]).grid(column=1, row=x)
+                ttk.Button(frm, text='Delete', command=lambda task=task:[task_window.withdraw(), self.delete_task(task, task_window, parent)]).grid(column=2, row=x)
+                x +=1
+        ttk.Button(frm, text='Return', command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=0, row=x)
         task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
 
-    def delete_task(self, task, parent):
+    def delete_task(self, task, parent, grandparent):
         confirm = messagebox.askyesno(message=f"You have selected '{task}' task to delete. Is this correct?", title="Delete task?")
         if confirm:       
             models.session.delete(task)
             models.session.commit()
             parent.destroy()
             messagebox.showinfo(message="Task deleted!")
-            self.root.deiconify()
+            menu_select = messagebox.askyesno(message="Would you like to Edit or Delete additional tasks?", title="Return to Edit/Delete menu?")
+            if menu_select:
+                self.edit_delete_task_window(self.root)
+            else:
+                grandparent.deiconify()
         else:
             self.return_win(parent)
 
     
-    def edit_task(self, task, parent):
+    def edit_task(self, task, parent, grandparent):
         task_window = Toplevel(self.root)
         self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
@@ -247,12 +252,12 @@ class OrganiserApp():
         ttk.Entry(frm, textvariable=edited_task_description).grid(column=1, row=2)
         ttk.Label(frm, text=f"Current deadline: {self.simple_date(task.deadline)}").grid(column=0, row=3)
         ttk.Entry(frm, textvariable=edited_task_deadline).grid(column=1, row=3)
-        ttk.Button(frm, text="Confirm", command=lambda:[parent.destroy(), task_window.withdraw(), self.confirm_edit(edited_task_type, edited_task_description, edited_task_deadline, task, task_window)]).grid(column=0, row=4)
+        ttk.Button(frm, text="Confirm", command=lambda:[parent.destroy(), task_window.withdraw(), self.confirm_edit(edited_task_type, edited_task_description, edited_task_deadline, task, task_window, grandparent)]).grid(column=0, row=4)
         ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=1, row=4)
         task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
 
-    def confirm_edit(self, edited_task_type, edited_task_description, edited_task_deadline, task_to_edit, parent):
+    def confirm_edit(self, edited_task_type, edited_task_description, edited_task_deadline, task_to_edit, parent, origin_window):
         clean_deadline = self.date_clean(edited_task_deadline.get())
         if edited_task_type.get():
             type = edited_task_type.get()
@@ -274,7 +279,7 @@ class OrganiserApp():
             models.session.commit()
             parent.destroy()
             messagebox.showinfo(message="Task edited!")
-            self.root.deiconify()
+            origin_window.deiconify()
         else:
             self.return_win(parent)
 
