@@ -31,6 +31,7 @@ class OrganiserApp():
         ttk.Button(frm, text="Select or create new profile", command=lambda:[self.deselect_current_table(), self.table_select_window()]).grid(column=0, row=7, padx=5, pady=5)
         ttk.Button(frm, text="Delete existing profile", command=lambda:[self.root.withdraw(), self.delete_table_window()]).grid(column=0, row=8, padx=5, pady=5)
         ttk.Button(frm, text="Quit", command=self.root.destroy).grid(column=0, row=9, padx=5, pady=5)
+        self.root.protocol("WM_DELETE_WINDOW", lambda:[self.root.destroy()])
         self.root.mainloop()
 
 
@@ -92,7 +93,7 @@ class OrganiserApp():
         x = 1
         for table in tables:
             ttk.Label(frm, text=table).grid(column=0, row=x)
-            ttk.Button(frm, text='Select', command=lambda table=table:[task_window.destroy(), parent.destroy(), self.assign_current_table(table), self.profile_name_update(), self.date_check(), self.root.deiconify()]).grid(column=1, row=x)
+            ttk.Button(frm, text='Select', command=lambda table=table:[task_window.destroy(), parent.destroy(), self.assign_current_table(table), self.profile_name_update(), self.table_assign_bad_date()]).grid(column=1, row=x)
             x += 1
         ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), parent.deiconify()]).grid(column=0, row=x)
         task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.destroy()])
@@ -106,7 +107,7 @@ class OrganiserApp():
         new_table_name = StringVar()
         ttk.Label(frm, text="Enter a new profile name").grid(column=0, row=0)
         ttk.Entry(frm, textvariable=new_table_name).grid(column=1, row=0)
-        ttk.Button(frm, text="Confirm", command=lambda:[task_window.destroy(), parent.destroy(), self.profile_creation_msg(new_table_name.get()), self.DBmng.create_models(new_table_name.get()), self.assign_current_table(new_table_name.get()), self.root.deiconify()]).grid(column=0, row=1)
+        ttk.Button(frm, text="Confirm", command=lambda:[task_window.destroy(), parent.destroy(), self.profile_creation_msg(new_table_name.get()), self.DBmng.create_models(new_table_name.get()), self.assign_current_table(new_table_name.get()), self.table_assign_bad_date()]).grid(column=0, row=1)
         ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), parent.deiconify()]).grid(column=1, row=1)
         task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.destroy()])
 
@@ -181,11 +182,14 @@ class OrganiserApp():
 
     
     def confirm_add(self, new_task_type, task_description, task_deadline, parent, grandparent):
+        clean_deadline = self.date_clean(task_deadline.get())
         if not new_task_type.get() or not task_description.get():
             messagebox.showinfo(message="Sorry both the task type and task description are needed to create a new task.\nPlease enter values for these fields")
             parent.deiconify()
+        elif clean_deadline < datetime.now().date():
+            messagebox.showinfo(message="Sorry you can't add tasks with past dates")
+            parent.deiconify()
         else:
-            clean_deadline = self.date_clean(task_deadline.get())
             confirm = messagebox.askyesno(message=f"You have entered {new_task_type.get()} for the task type, {task_description.get()} for the task description and {self.simple_date(clean_deadline)} for the deadline. Is this correct?", title="check your info")
             if confirm:
                 new_task = self.current_table(task_type = new_task_type.get(), description=task_description.get(), deadline=clean_deadline)
@@ -228,11 +232,14 @@ class OrganiserApp():
             models.session.commit()
             parent.destroy()
             messagebox.showinfo(message="Task deleted!")
-            menu_select = messagebox.askyesno(message="Would you like to Edit or Delete additional tasks?", title="Return to Edit/Delete menu?")
-            if menu_select:
-                self.edit_delete_task_window(self.root)
+            if self.bad_date_check():
+                self.amend_bad_dates()
             else:
-                grandparent.deiconify()
+                menu_select = messagebox.askyesno(message="Would you like to Edit or Delete additional tasks?", title="Return to Edit/Delete menu?")
+                if menu_select:
+                    self.edit_delete_task_window(self.root)
+                else:
+                    grandparent.deiconify()
         else:
             self.return_win(parent)
 
@@ -268,7 +275,11 @@ class OrganiserApp():
         else:
             description = task_to_edit.description
         if clean_deadline:
-            deadline = clean_deadline
+            if clean_deadline > datetime.now().date():
+                deadline = clean_deadline
+            else:
+                messagebox.showinfo(message="Sorry you can't edit a deadline to be a past date")
+                parent.deiconify()
         else:
             deadline = task_to_edit.deadline
         confirm = messagebox.askyesno(message=f"If you confirm this edit the new task values will be:\nTask type: {type}, Description: {description}, Deadline: {self.simple_date(deadline)}", title="Edit task?")
@@ -279,7 +290,10 @@ class OrganiserApp():
             models.session.commit()
             parent.destroy()
             messagebox.showinfo(message="Task edited!")
-            origin_window.deiconify()
+            if self.bad_date_check():
+                self.amend_bad_dates()
+            else:
+                origin_window.deiconify()
         else:
             self.return_win(parent)
 
@@ -315,23 +329,36 @@ class OrganiserApp():
         return None
 
 
-    def date_check(self):
+    def bad_date_check(self):
         if self.current_table != None:
             current_date = datetime.now().date()
             if len(list(models.session.query(self.current_table).filter(self.current_table.deadline.isnot(None)).filter(self.current_table.deadline < current_date))):
-                task_window = Toplevel(self.root)
-                self.win_geometry(300, 400, task_window)
-                frm = ttk.Frame(task_window, padding=10)
-                frm.grid()
-                x = 0
-                for reminder in models.session.query(self.current_table).filter(self.current_table.deadline.isnot(None)).filter(self.current_table.deadline < current_date):
-                    ttk.Label(frm, text=f"{reminder.description} is scheduled to have already happened would you like to delete or edit this entry?").grid(column=0, row=x)
-                    ttk.Button(frm, text='Edit task', command=lambda:[task_window.withdraw(), self.edit_task_window(reminder, task_window)]).grid(column=1, row=x)
-                    ttk.Button(frm, text='Delete task', command=lambda:[task_window.withdraw(), self.delete_task(reminder, task_window), self.date_check()]).grid(column=2, row=x)
-                    x +=1
-                task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
+                return True
+                
 
-    
+    def amend_bad_dates(self):
+        current_date = datetime.now().date()
+        self.root.withdraw()
+        task_window = Toplevel(self.root)
+        self.win_geometry(300, 400, task_window)
+        frm = ttk.Frame(task_window, padding=10)
+        frm.grid()
+        x = 0
+        for reminder in models.session.query(self.current_table).filter(self.current_table.deadline.isnot(None)).filter(self.current_table.deadline < current_date):
+            ttk.Label(frm, text=f"{reminder.description} is scheduled to have already happened would you like to delete or edit this entry?").grid(column=0, row=x)
+            ttk.Button(frm, text='Edit task', command=lambda:[task_window.withdraw(), self.edit_task(reminder, task_window, self.root)]).grid(column=1, row=x)
+            ttk.Button(frm, text='Delete task', command=lambda:[task_window.withdraw(), self.delete_task(reminder, task_window, self.root)]).grid(column=2, row=x)
+            x +=1
+        task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
+
+
+    def table_assign_bad_date(self):
+        if self.bad_date_check():
+            self.amend_bad_dates()
+        else:
+            self.root.deiconify()
+
+
     def return_win(self, current_parent):
         if current_parent:
             current_parent.deiconify()
