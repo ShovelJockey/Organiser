@@ -161,24 +161,28 @@ class OrganiserApp():
         
 
     def add_task_window(self, parent, cal_deadline=""):
-        task_window = Toplevel(self.root)
-        self.win_geometry(300, 400, task_window)
-        frm = ttk.Frame(task_window, padding=10)
-        frm.grid()
-        new_task_type = StringVar()
-        new_task_description = StringVar()
-        new_task_deadline = StringVar()
-        new_task_deadline.set(cal_deadline)
-        ttk.Label(frm, text="Add a new task").grid(column=0, row=0)
-        ttk.Label(frm, text="Enter what type of task").grid(column=0, row=1)
-        ttk.Entry(frm, textvariable=new_task_type).grid(column=1, row=1)
-        ttk.Label(frm, text="Enter a brief description of the task").grid(column=0, row=2)
-        ttk.Entry(frm, textvariable=new_task_description).grid(column=1, row=2)
-        ttk.Label(frm, text="Enter the task deadline, if it has one. Enter the date in numerical day-month-year format ie 22-07-1992").grid(column=0, row=3)
-        ttk.Entry(frm, textvariable=new_task_deadline).grid(column=1, row=3)
-        ttk.Button(frm, text="Confirm", command=lambda:[task_window.withdraw(), self.confirm_add(new_task_type, new_task_description, new_task_deadline, task_window, parent)]).grid(column=0, row=4)
-        ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=1, row=4)
-        task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
+        if self.date_clean(cal_deadline):
+            messagebox.showinfo(message="Sorry you can't add tasks with past dates")
+            parent.deiconify()
+        else:
+            task_window = Toplevel(self.root)
+            self.win_geometry(300, 400, task_window)
+            frm = ttk.Frame(task_window, padding=10)
+            frm.grid()
+            new_task_type = StringVar()
+            new_task_description = StringVar()
+            new_task_deadline = StringVar()
+            new_task_deadline.set(cal_deadline)
+            ttk.Label(frm, text="Add a new task").grid(column=0, row=0)
+            ttk.Label(frm, text="Enter what type of task").grid(column=0, row=1)
+            ttk.Entry(frm, textvariable=new_task_type).grid(column=1, row=1)
+            ttk.Label(frm, text="Enter a brief description of the task").grid(column=0, row=2)
+            ttk.Entry(frm, textvariable=new_task_description).grid(column=1, row=2)
+            ttk.Label(frm, text="Enter the task deadline, if it has one. Enter the date in numerical day-month-year format ie 22-07-1992").grid(column=0, row=3)
+            ttk.Entry(frm, textvariable=new_task_deadline).grid(column=1, row=3)
+            ttk.Button(frm, text="Confirm", command=lambda:[task_window.withdraw(), self.confirm_add(new_task_type, new_task_description, new_task_deadline, task_window, parent)]).grid(column=0, row=4)
+            ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=1, row=4)
+            task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
     
     def confirm_add(self, new_task_type, task_description, task_deadline, parent, grandparent):
