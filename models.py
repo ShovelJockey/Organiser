@@ -38,14 +38,4 @@ class Task(Base):
             return f"Task type: {self.task_type}, Description of task: {self.description}, this task has no deadline."
 
 
-def date_clean(date):
-    for fmt in ["%d-%m-%Y", "%d.%m.%Y", "%d/%m/%Y", "%d %m %Y"]:
-        try:
-            cleaned_date = datetime.strptime(date, fmt).date()
-        except ValueError:
-            pass
-        else:
-            return cleaned_date
-    return None
-
 Base.metadata.create_all(engine)
