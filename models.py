@@ -1,65 +1,51 @@
-from sqlalchemy import create_engine, Column, Integer, String, Date
-from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy.schema import MetaData
+from sqlalchemy import ForeignKey, create_engine, Column, Integer, String, Date
+from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 import calendar
+from datetime import datetime, timedelta
 
 
-class DBmaker():
-    
-
-    def __init__(self, DB_name):
-        self.DB_name = DB_name
-        self.table_names = []
-        global engine
-        engine = create_engine(self.DB_name, echo=False)
-        Session = sessionmaker(bind=engine)
-        global session
-        session = Session()
+engine = create_engine("sqlite:///organiser.db", echo=False)
+Session = sessionmaker(bind=engine)
+session = Session()
+Base = declarative_base()
 
 
-    def create_models(self, table_name):
-        Base = declarative_base()
-        class Task(Base):
-            __tablename__ = table_name
+class User(Base):
+    __tablename__ = "Users"
 
-            id = Column(Integer, primary_key=True)
-            task_type = Column(String)
-            description = Column(String)
-            deadline = Column(Date, nullable=True)
+    id = Column(Integer, primary_key=True)
+    user_name = Column(String)
+    tasks = relationship("Task", backref="Users", cascade="all, delete, delete-orphan", lazy='dynamic', passive_deletes=True)
 
-
-            def __repr__(self):
-                if self.deadline:
-                    deadline = self.deadline.strftime("%d/%m/%Y")
-                    return f'Task type: {self.task_type}, Description of task: {self.description}, needs to be completed by: {deadline}  which is a {calendar.day_name[self.deadline.weekday()]}'
-                else:
-                    return f'Task type: {self.task_type}, Description of task: {self.description}, this task has no deadline.'
-        Base.metadata.create_all(engine)
-        return Task
-
-    
-    def get_model(self, user_name):
-        DynamicBase = declarative_base(class_registry=dict())
-        class Task(DynamicBase):
-            __tablename__ = user_name
-
-            id = Column(Integer, primary_key=True)
-            task_type = Column(String)
-            description = Column(String)
-            deadline = Column(Date, nullable=True)
+    def __repr__(self):
+        return self.user_name
 
 
-            def __repr__(self):
-                if self.deadline:
-                    deadline = self.deadline.strftime("%d/%m/%Y")
-                    return f'Task type: {self.task_type}, Description of task: {self.description}, needs to be completed by: {deadline}  which is a {calendar.day_name[self.deadline.weekday()]}'
-                else:
-                    return f'Task type: {self.task_type}, Description of task: {self.description}, this task has no deadline.'
-        return Task
+class Task(Base):
+    __tablename__ = "Tasks"
+
+    id = Column(Integer, primary_key=True)
+    task_type = Column(String)
+    description = Column(String)
+    deadline = Column(Date, nullable=True)
+    user_id = Column(Integer, ForeignKey("Users.id"), nullable=False)
+
+    def __repr__(self):
+        if self.deadline:
+            deadline = self.deadline.strftime("%d/%m/%Y")
+            return f"Task type: {self.task_type}, Description of task: {self.description}, needs to be completed by: {deadline}  which is a {calendar.day_name[self.deadline.weekday()]}."
+        else:
+            return f"Task type: {self.task_type}, Description of task: {self.description}, this task has no deadline."
 
 
-    def get_table_names(self):
-        meta = MetaData()
-        meta.reflect(bind=engine)
-        return meta.tables.keys()
-    
+def date_clean(date):
+    for fmt in ["%d-%m-%Y", "%d.%m.%Y", "%d/%m/%Y", "%d %m %Y"]:
+        try:
+            cleaned_date = datetime.strptime(date, fmt).date()
+        except ValueError:
+            pass
+        else:
+            return cleaned_date
+    return None
+
+Base.metadata.create_all(engine)

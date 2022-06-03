@@ -1,4 +1,4 @@
-import models
+from models import User, Task, session
 from datetime import datetime, timedelta
 from tkinter import Tk, ttk, Toplevel, StringVar, messagebox
 from tkcalendar import Calendar
@@ -10,8 +10,7 @@ class OrganiserApp():
     def __init__(self):
         self.root = Tk()
         self.root.title("Organiser")
-        self.DBmng = models.DBmaker('sqlite:///organiser.db')
-        self.current_table = None
+        self.current_user = None
         self.current_profile_name = StringVar()
     
 
@@ -19,7 +18,7 @@ class OrganiserApp():
         self.win_geometry(300, 400, self.root)
         frm = ttk.Frame(self.root, padding=10)
         frm.grid()
-        self.table_select_window()
+        self.user_select_create_window()
         ttk.Label(frm, text="Welcome to my organiser app").grid(column=0, row=0, padx=5, pady=5)
         ttk.Label(frm, text="Current profile:").grid(column=0, row=1, padx=5, pady=5)
         ttk.Label(frm, textvariable=self.current_profile_name).grid(column=1, row=1, padx=5, pady=5)
@@ -28,8 +27,8 @@ class OrganiserApp():
         ttk.Button(frm, text="Calendar", command=lambda:[self.root.withdraw(), self.calendar_view()]).grid(column=0, row=4, padx=5, pady=5)
         ttk.Button(frm, text="Add a new task", command=lambda:[self.root.withdraw(), self.add_task_window(self.root)]).grid(column=0, row=5, padx=5, pady=5)
         ttk.Button(frm, text="Delete or Edit a task", command=lambda:[self.root.withdraw(), self.edit_delete_task_window(self.root)]).grid(column=0, row=6, padx=5, pady=5)
-        ttk.Button(frm, text="Select or create new profile", command=lambda:[self.deselect_current_table(), self.table_select_window()]).grid(column=0, row=7, padx=5, pady=5)
-        ttk.Button(frm, text="Delete existing profile", command=lambda:[self.root.withdraw(), self.delete_table_window()]).grid(column=0, row=8, padx=5, pady=5)
+        ttk.Button(frm, text="Select or create new profile", command=lambda:[self.deselect_current_user(), self.user_select_create_window()]).grid(column=0, row=7, padx=5, pady=5)
+        ttk.Button(frm, text="Delete existing profile", command=lambda:[self.root.withdraw(), self.delete_user_window()]).grid(column=0, row=8, padx=5, pady=5)
         ttk.Button(frm, text="Quit", command=self.root.destroy).grid(column=0, row=9, padx=5, pady=5)
         self.root.protocol("WM_DELETE_WINDOW", lambda:[self.root.destroy()])
         self.root.mainloop()
@@ -56,91 +55,102 @@ class OrganiserApp():
 
     def cal_tasks(self, date, tasks_str):
         date = datetime.strptime(date, "%d/%m/%Y").date()
-        if models.session.query(self.current_table).filter_by(deadline=date).count() > 0:
+        if self.current_user.tasks.filter(Task.deadline==date).count() > 0:
             tasks = ""
-            for model in models.session.query(self.current_table).filter_by(deadline=date):
+            for model in self.current_user.tasks.filter(Task.deadline==date):
                 tasks = tasks + "-" + model.task_type + ", " + model.description + "\n"
         else:
             tasks = "No tasks"
         tasks_str.set(tasks)
 
 
-    def table_select_window(self):
-        if self.current_table == None:
+    def user_select_create_window(self):
+        if self.current_user == None:
             self.root.withdraw()
             task_window = Toplevel(self.root)
             self.win_geometry(300, 400, task_window)
             frm = ttk.Frame(task_window, padding=10)
             frm.grid()
-            if self.DBmng.get_table_names():
+            if session.query(User).count():
                 ttk.Label(frm, text="Select a user profile or create a new one").grid(column=0, row=0, padx=5, pady=5)
-                ttk.Button(frm, text="Select existing profile", command=lambda:[task_window.withdraw, self.select_table(task_window)]).grid(column=0, row=1, padx=5, pady=5)
-                ttk.Button(frm, text="Create new profile", command=lambda:[task_window.withdraw(), self.create_table(task_window)]).grid(column=0, row=2, padx=5, pady=5)
+                ttk.Button(frm, text="Select existing profile", command=lambda:[task_window.withdraw, self.select_user(task_window)]).grid(column=0, row=1, padx=5, pady=5)
+                ttk.Button(frm, text="Create new profile", command=lambda:[task_window.withdraw(), self.create_user_window(task_window)]).grid(column=0, row=2, padx=5, pady=5)
             else:
                 ttk.Label(frm, text="No user profiles detected please create a new profile").grid(column=0, row=0, padx=5, pady=5)
-                ttk.Button(frm, text="Create new profile", command=lambda:[task_window.withdraw(), self.create_table(task_window)]).grid(column=0, row=1, padx=5, pady=5)
+                ttk.Button(frm, text="Create new profile", command=lambda:[task_window.withdraw(), self.create_user_window(task_window)]).grid(column=0, row=1, padx=5, pady=5)
             ttk.Button(frm, text="Quit", command=lambda:[task_window.destroy(), self.root.destroy()]).grid(column=0, row=6, padx=5, pady=5)
             task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.destroy()])
         
 
-    def select_table(self, parent):
-        tables = self.DBmng.get_table_names()
+    def select_user(self, parent):
         task_window = Toplevel(self.root)
         self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
         ttk.Label(frm, text="Select one of the existing profiles").grid(column=0, row=0)
         x = 1
-        for table in tables:
-            ttk.Label(frm, text=table).grid(column=0, row=x)
-            ttk.Button(frm, text='Select', command=lambda table=table:[task_window.destroy(), parent.destroy(), self.assign_current_table(table), self.profile_name_update(), self.table_assign_bad_date()]).grid(column=1, row=x)
+        for user in session.query(User):
+            ttk.Label(frm, text=user.user_name).grid(column=0, row=x)
+            ttk.Button(frm, text='Select', command=lambda user=user:[task_window.destroy(), parent.destroy(), self.assign_current_user(user), self.user_assign_bad_date()]).grid(column=1, row=x)
             x += 1
         ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), parent.deiconify()]).grid(column=0, row=x)
         task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.destroy()])
 
 
-    def create_table(self, parent):
+    def create_user_window(self, parent):
         task_window = Toplevel(self.root)
         self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
-        new_table_name = StringVar()
+        new_user_name = StringVar()
         ttk.Label(frm, text="Enter a new profile name").grid(column=0, row=0)
-        ttk.Entry(frm, textvariable=new_table_name).grid(column=1, row=0)
-        ttk.Button(frm, text="Confirm", command=lambda:[task_window.destroy(), parent.destroy(), self.profile_creation_msg(new_table_name.get()), self.DBmng.create_models(new_table_name.get()), self.assign_current_table(new_table_name.get()), self.table_assign_bad_date()]).grid(column=0, row=1)
+        ttk.Entry(frm, textvariable=new_user_name).grid(column=1, row=0)
+        ttk.Button(frm, text="Confirm", command=lambda:[task_window.withdraw(), parent.destroy(), self.create_user(new_user_name.get(), task_window), self.user_assign_bad_date()]).grid(column=0, row=1)
         ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), parent.deiconify()]).grid(column=1, row=1)
         task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.destroy()])
 
+    
+    def create_user(self, new_user_name, parent):
+        for user in session.query(User):
+            if user.user_name == new_user_name:
+                messagebox.showinfo(message="Profile of same name already found, profile has not been created")
+                parent.deiconify()
+                return
+        parent.destroy()
+        new_user = User(user_name=new_user_name)
+        session.add(new_user)
+        session.commit()
+        messagebox.showinfo(message="Profile created!")
+        self.assign_current_user(new_user)
 
-    def delete_table_window(self):
-        tables = self.DBmng.get_table_names()
+
+    def delete_user_window(self):
         task_window = Toplevel(self.root)
         self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
         ttk.Label(frm, text="Select a profile to delete").grid(column=0, row=0)
         x = 1
-        for table in tables:
-            ttk.Label(frm, text=table).grid(column=0, row=x)
-            ttk.Button(frm, text='Delete', command=lambda table=table:[task_window.withdraw(), self.delete_table(table, task_window)]).grid(column=1, row=x)
+        for user in session.query(User):
+            ttk.Label(frm, text=user.user_name).grid(column=0, row=x)
+            ttk.Button(frm, text='Delete', command=lambda user=user:[task_window.withdraw(), self.delete_user(user, task_window)]).grid(column=1, row=x)
             x += 1
         ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.root.deiconify()]).grid(column=0, row=x)
         task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.deiconify()])
 
 
-    def delete_table(self, table_name, parent):
-        confirm = messagebox.askyesno(message=f"Are you sure you want to delete user profile: '{table_name}'", title="Delete profile?")
+    def delete_user(self, user, parent):
+        confirm = messagebox.askyesno(message=f"Are you sure you want to delete user profile: '{user.user_name}'", title="Delete profile?")
         if confirm:
-            table_to_del = self.DBmng.get_model(table_name)
             parent.destroy()
-            if table_to_del.__tablename__ == self.current_table.__tablename__:
-                self.deselect_current_table()
-            table_to_del.__table__.drop(models.engine)
+            if user == self.current_user:
+                self.deselect_current_user()
+            session.delete(user)
             messagebox.showinfo(message="Profile deleted")
-            if self.current_table:
+            if self.current_user:
                 self.root.deiconify()
             else:
-                self.table_select_window()
+                self.user_select_create_window()
         else:
             self.return_win(parent)
 
@@ -150,10 +160,10 @@ class OrganiserApp():
         self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
-        if models.session.query(self.current_table).count() == 0:
+        if self.current_user.tasks.count() == 0:
             ttk.Label(frm, text="Currently no tasks for this profile").grid(column=0, row=0)
         x = 1
-        for reminder in models.session.query(self.current_table):
+        for reminder in self.current_user.tasks:
             ttk.Label(frm, text=reminder).grid(column=0, row=x)
             x += 1
         ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.root.deiconify()]).grid(column=0, row=x)
@@ -161,7 +171,7 @@ class OrganiserApp():
         
 
     def add_task_window(self, parent, cal_deadline=""):
-        if self.date_clean(cal_deadline):
+        if self.date_clean(cal_deadline) and self.date_clean(cal_deadline) < datetime.now().date():
             messagebox.showinfo(message="Sorry you can't add tasks with past dates")
             parent.deiconify()
         else:
@@ -196,9 +206,9 @@ class OrganiserApp():
         else:
             confirm = messagebox.askyesno(message=f"You have entered {new_task_type.get()} for the task type, {task_description.get()} for the task description and {self.simple_date(clean_deadline)} for the deadline. Is this correct?", title="check your info")
             if confirm:
-                new_task = self.current_table(task_type = new_task_type.get(), description=task_description.get(), deadline=clean_deadline)
-                models.session.add(new_task)
-                models.session.commit()
+                new_task = Task(task_type = new_task_type.get(), description=task_description.get(), deadline=clean_deadline, user_id=self.current_user.id)
+                session.add(new_task)
+                session.commit()
                 parent.destroy()
                 messagebox.showinfo(message="Task added!")
                 grandparent.deiconify()
@@ -214,13 +224,13 @@ class OrganiserApp():
         ttk.Label(frm, text="Choose a task to delete").grid(column=0, row=0)
         x = 1
         if cal_date is None:
-            for task in models.session.query(self.current_table):
+            for task in self.current_user.tasks:
                 ttk.Label(frm, text=task).grid(column=0, row=x)
                 ttk.Button(frm, text='Edit', command=lambda task=task:[task_window.withdraw(), self.edit_task(task, task_window, parent)]).grid(column=1, row=x)
                 ttk.Button(frm, text='Delete', command=lambda task=task:[task_window.withdraw(), self.delete_task(task, task_window, parent)]).grid(column=2, row=x)
                 x +=1
         else:
-            for task in models.session.query(self.current_table).filter_by(deadline=cal_date):
+            for task in self.current_user.tasks.filter(Task.deadline==cal_date):
                 ttk.Label(frm, text=task).grid(column=0, row=x)
                 ttk.Button(frm, text='Edit', command=lambda task=task:[task_window.withdraw(), self.edit_task(task, task_window, parent)]).grid(column=1, row=x)
                 ttk.Button(frm, text='Delete', command=lambda task=task:[task_window.withdraw(), self.delete_task(task, task_window, parent)]).grid(column=2, row=x)
@@ -232,8 +242,8 @@ class OrganiserApp():
     def delete_task(self, task, parent, grandparent):
         confirm = messagebox.askyesno(message=f"You have selected '{task}' task to delete. Is this correct?", title="Delete task?")
         if confirm:       
-            models.session.delete(task)
-            models.session.commit()
+            session.delete(task)
+            session.commit()
             parent.destroy()
             messagebox.showinfo(message="Task deleted!")
             if self.bad_date_check():
@@ -291,7 +301,7 @@ class OrganiserApp():
             task_to_edit.task_type = type
             task_to_edit.description = description
             task_to_edit.deadline = deadline
-            models.session.commit()
+            session.commit()
             parent.destroy()
             messagebox.showinfo(message="Task edited!")
             if self.bad_date_check():
@@ -311,8 +321,8 @@ class OrganiserApp():
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
         x = 0
-        if len(list(models.session.query(self.current_table).filter(self.current_table.deadline.isnot(None)).filter(self.current_table.deadline <= urgent_time))) != 0:
-            for reminder in models.session.query(self.current_table).filter(self.current_table.deadline.isnot(None)).filter(self.current_table.deadline <= urgent_time):
+        if (self.current_user.tasks.filter(Task.deadline.isnot(None)).filter(Task.deadline <= urgent_time)).count() != 0:
+            for reminder in self.current_user.tasks.filter(Task.deadline.isnot(None)).filter(Task.deadline <= urgent_time):
                 ttk.Label(frm, text=reminder).grid(column=0, row=x)
                 ttk.Label(frm, text=f"This is in {reminder.deadline - current_time}").grid(column=0, row=x+1)
                 x +=1
@@ -323,7 +333,7 @@ class OrganiserApp():
 
 
     def date_clean(self, date):
-        for fmt in ["%d-%m-%Y", '%d.%m.%Y', '%d/%m/%Y', '%d %m %Y']:
+        for fmt in ["%d-%m-%Y", "%d.%m.%Y", "%d/%m/%Y", "%d %m %Y"]:
             try:
                 cleaned_date = datetime.strptime(date, fmt).date()
             except ValueError:
@@ -334,9 +344,9 @@ class OrganiserApp():
 
 
     def bad_date_check(self):
-        if self.current_table != None:
+        if self.current_user != None:
             current_date = datetime.now().date()
-            if len(list(models.session.query(self.current_table).filter(self.current_table.deadline.isnot(None)).filter(self.current_table.deadline < current_date))):
+            if (self.current_user.tasks.filter(Task.deadline.isnot(None)).filter(Task.deadline < current_date)).count() != 0:
                 return True
                 
 
@@ -348,7 +358,7 @@ class OrganiserApp():
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
         x = 0
-        for reminder in models.session.query(self.current_table).filter(self.current_table.deadline.isnot(None)).filter(self.current_table.deadline < current_date):
+        for reminder in self.current_user.tasks.filter(Task.deadline.isnot(None)).filter(Task.deadline < current_date):
             ttk.Label(frm, text=f"{reminder.description} is scheduled to have already happened would you like to delete or edit this entry?").grid(column=0, row=x)
             ttk.Button(frm, text='Edit task', command=lambda:[task_window.withdraw(), self.edit_task(reminder, task_window, self.root)]).grid(column=1, row=x)
             ttk.Button(frm, text='Delete task', command=lambda:[task_window.withdraw(), self.delete_task(reminder, task_window, self.root)]).grid(column=2, row=x)
@@ -356,7 +366,7 @@ class OrganiserApp():
         task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
 
-    def table_assign_bad_date(self):
+    def user_assign_bad_date(self):
         if self.bad_date_check():
             self.amend_bad_dates()
         else:
@@ -381,24 +391,18 @@ class OrganiserApp():
         return deadline
 
     
-    def assign_current_table(self, table_name):
-        self.current_table = self.DBmng.get_model(table_name)
+    def assign_current_user(self, user):
+        self.current_user = user
+        self.profile_name_update()
         
 
-    def deselect_current_table(self):
-        self.current_table = None
-
-
-    def profile_creation_msg(self, table_name):
-        if table_name in self.DBmng.get_table_names():
-            messagebox.showinfo(message="Profile of same name already found, profile has not been created")
-        else:
-            messagebox.showinfo(message="Profile created!")
+    def deselect_current_user(self):
+        self.current_user = None
 
 
     def profile_name_update(self):
-        if self.current_table:
-            self.current_profile_name.set(self.current_table.__tablename__)
+        if self.current_user:
+            self.current_profile_name.set(self.current_user.user_name)
 
 
     def win_geometry(self, width, height, window):
