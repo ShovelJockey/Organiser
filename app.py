@@ -1,5 +1,7 @@
-from models import User, Task, session
 from datetime import datetime, timedelta
+from this import d
+from draft_manager import DraftManager
+from models import User, Task, session
 from tkinter import Tk, ttk, Toplevel, StringVar, messagebox
 from tkcalendar import Calendar
 
@@ -9,6 +11,7 @@ class OrganiserApp():
 
     def __init__(self):
         self.root = Tk()
+        self.dm = DraftManager()
         self.root.title("Organiser")
         self.current_user = None
         self.current_profile_name = StringVar()
@@ -103,21 +106,28 @@ class OrganiserApp():
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
         new_user_name = StringVar()
+        new_user_email = StringVar()
         ttk.Label(frm, text="Enter a new profile name").grid(column=0, row=0)
         ttk.Entry(frm, textvariable=new_user_name).grid(column=1, row=0)
-        ttk.Button(frm, text="Confirm", command=lambda:[task_window.withdraw(), parent.destroy(), self.create_user(new_user_name.get(), task_window), self.user_assign_bad_date()]).grid(column=0, row=1)
-        ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), parent.deiconify()]).grid(column=1, row=1)
+        ttk.Label(frm, text="Enter a your email address").grid(column=0, row=1)
+        ttk.Entry(frm, textvariable=new_user_email).grid(column=1, row=1)
+        ttk.Button(frm, text="Confirm", command=lambda:[task_window.withdraw(), parent.destroy(), self.create_user(new_user_name.get(), new_user_email.get(), task_window), self.user_assign_bad_date()]).grid(column=0, row=2)
+        ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), parent.deiconify()]).grid(column=1, row=2)
         task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.destroy()])
 
     
-    def create_user(self, new_user_name, parent):
+    def create_user(self, new_user_name, new_user_email, parent):
+        if not new_user_name or not new_user_email:
+            messagebox.showinfo(message="You need to enter both a user name and an email address")
+            parent.deiconify()
+            return
         for user in session.query(User):
             if user.user_name == new_user_name:
                 messagebox.showinfo(message="Profile of same name already found, profile has not been created")
                 parent.deiconify()
                 return
         parent.destroy()
-        new_user = User(user_name=new_user_name)
+        new_user = User(user_name=new_user_name, user_email=new_user_email)
         session.add(new_user)
         session.commit()
         messagebox.showinfo(message="Profile created!")
@@ -195,18 +205,20 @@ class OrganiserApp():
             task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
     
-    def confirm_add(self, new_task_type, task_description, task_deadline, parent, grandparent):
-        clean_deadline = self.date_clean(task_deadline.get())
-        if not new_task_type.get() or not task_description.get():
+    def confirm_add(self, new_task_type, new_task_description, new_task_deadline, parent, grandparent):
+        clean_deadline = self.date_clean(new_task_deadline.get())
+        if not new_task_type.get() or not new_task_description.get():
             messagebox.showinfo(message="Sorry both the task type and task description are needed to create a new task.\nPlease enter values for these fields")
             parent.deiconify()
         elif clean_deadline < datetime.now().date():
             messagebox.showinfo(message="Sorry you can't add tasks with past dates")
             parent.deiconify()
         else:
-            confirm = messagebox.askyesno(message=f"You have entered {new_task_type.get()} for the task type, {task_description.get()} for the task description and {self.simple_date(clean_deadline)} for the deadline. Is this correct?", title="check your info")
+            confirm = messagebox.askyesno(message=f"You have entered {new_task_type.get()} for the task type, {new_task_description.get()} for the task description and {self.simple_date(clean_deadline)} for the deadline. Is this correct?", title="check your info")
             if confirm:
-                new_task = Task(task_type = new_task_type.get(), description=task_description.get(), deadline=clean_deadline, user_id=self.current_user.id)
+                if clean_deadline:
+                    task_draft_id = self.send_to_draft(new_task_description.get(), clean_deadline)
+                new_task = Task(task_type = new_task_type.get(), description=new_task_description.get(), deadline=clean_deadline, user_id=self.current_user.id, draft_id=task_draft_id)
                 session.add(new_task)
                 session.commit()
                 parent.destroy()
@@ -412,6 +424,25 @@ class OrganiserApp():
         y = (sh/2) - (height/2)
         return window.geometry('+%d+%d' % (x, y))
 
+
+    def send_to_draft(self, task_desc, task_deadline):
+        time_until_deadline = task_deadline + timedelta(days=1) # pass to cloud db
+        email_content = f'This is a gentle reminder that on {self.simple_date(task_deadline)} you have the task with the description:{task_desc},\nwhich is tomorrow!'
+        draft_id = self.dm.create_draft(email_content, self.current_user.user_email, 'A Gentle Reminder') # draft object has draft id to pass to cloud db
+        return draft_id
+        
+
+    def update_draft(self, updated_message, updated_deadline):
+        time_until_deadline = updated_deadline + timedelta(days=1) # pass to cloud db
+        email_content = f'This is a gentle reminder that on {self.simple_date(updated_deadline)} you have the task with the description:{updated_message},\nwhich is tomorrow!'
+        self.dm.update_draft(email_content, self.current_user.user_email, 'A Gentle Reminder')
+        #for updating draft message when task description or deadline is updated 
+
+
+    def delete_draft(self):
+        pass#for deleting draft when task is deleted
+
+        #add update user email function!
 
 
 if __name__ == '__main__':

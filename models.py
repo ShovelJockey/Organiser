@@ -15,10 +15,12 @@ class User(Base):
 
     id = Column(Integer, primary_key=True)
     user_name = Column(String)
+    user_email = Column(String)
     tasks = relationship("Task", backref="Users", cascade="all, delete, delete-orphan", lazy='dynamic', passive_deletes=True)
 
+
     def __repr__(self):
-        return self.user_name
+        return f"User name: {self.user_name}, User email: {self.user_email}"
 
 
 class Task(Base):
@@ -29,6 +31,8 @@ class Task(Base):
     description = Column(String)
     deadline = Column(Date, nullable=True)
     user_id = Column(Integer, ForeignKey("Users.id"), nullable=False)
+    draft_id = Column(String, nullable=True)
+
 
     def __repr__(self):
         if self.deadline:
