@@ -11,7 +11,7 @@ class DraftManager:
         SCOPES = ['https://mail.google.com/']
         creds = Credentials.from_authorized_user_file('token.json', SCOPES)
         service = build('gmail', 'v1', credentials=creds)
-        self.draft = service.users().drafts()
+        self.drafts = service.users().drafts()
 
 
     def create_message(self, message_content, user_email, message_subject):
@@ -27,7 +27,7 @@ class DraftManager:
         msg = self.create_message(message_content, user_email, message_subject)
         try:
             message = {'message': msg}
-            draft = self.draft.create(userId='me', body=message).execute()
+            draft = self.drafts.create(userId='me', body=message).execute()
             return draft['id']
 
         except HttpError as error:
@@ -38,7 +38,19 @@ class DraftManager:
     def update_draft(self, message_content, user_email, message_subject, draft_id):
         new_msg = self.create_message(message_content, user_email, message_subject)
         try:
-            self.draft.update(userId='me', id=draft_id, body={ 'message': new_msg }).execute()
+            self.drafts.update(userId='me', id=draft_id, body={ 'message': new_msg }).execute()
+
+        except HttpError as error:
+            print(f'An error occurred: {error}')
+
+            return None
+
+
+    def update_draft_email_only(self, user_email, draft_id):
+        msg = self.drafts.get(userId='me', id=draft_id, format='raw')
+        msg['to'] = user_email
+        try:
+            self.drafts.update(userId='me', id=draft_id, body={ 'message': msg }).execute()
 
         except HttpError as error:
             print(f'An error occurred: {error}')
@@ -48,7 +60,7 @@ class DraftManager:
 
     def send_draft(self, draft_id):
         try:
-            self.draft.send(userId='me', body={ 'id': draft_id }).execute()
+            self.drafts.send(userId='me', body={ 'id': draft_id }).execute()
         
         except HttpError as error:
             print(f'An error occurred: {error}')
@@ -58,7 +70,7 @@ class DraftManager:
 
     def delete_draft(self, draft_id):
         try:
-            self.draft.delete(userId='me', id=draft_id).execute()
+            self.drafts.delete(userId='me', id=draft_id).execute()
         
         except HttpError as error:
             print(f'An error occurred: {error}')

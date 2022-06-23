@@ -146,7 +146,7 @@ class OrganiserApp():
         for user in session.query(User):
             ttk.Label(frm, text=user.user_name).grid(column=0, row=x)
             ttk.Button(frm, text='Delete', command=lambda user=user:[task_window.withdraw(), self.delete_user(user, task_window)]).grid(column=1, row=x)
-            ttk.Button(frm, text='Edit', command=lambda user=user:[task_window.withdraw(), self.edit_user(user, task_window)]).grid(column=1, row=x)
+            ttk.Button(frm, text='Edit', command=lambda user=user:[task_window.withdraw(), self.edit_user_new_value_window(user, task_window)]).grid(column=1, row=x)
             x += 1
         ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.root.deiconify()]).grid(column=0, row=x)
         task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.deiconify()])
@@ -158,12 +158,58 @@ class OrganiserApp():
             parent.destroy()
             if user == self.current_user:
                 self.deselect_current_user()
+            for task in user.tasks:
+                if task.draft_id:
+                    self.delete_draft(task.draft_id)
             session.delete(user)
+            session.commit()
             messagebox.showinfo(message="Profile deleted")
             if self.current_user:
                 self.root.deiconify()
             else:
                 self.user_select_create_window()
+        else:
+            self.return_win(parent)
+
+
+    def edit_user_new_value_window(self, user, parent):
+        task_window = Toplevel(self.root)
+        self.win_geometry(300, 400, task_window)
+        frm = ttk.Frame(task_window, padding=10)
+        frm.grid()
+        edited_user_name = StringVar()
+        edited_user_email = StringVar()
+        ttk.Label(frm, text="Enter new values in any field you wish to edit, otherwise leave them blank").grid(column=0, row=0)
+        ttk.Label(frm, text=f"Current User name: {user.user_name}").grid(column=0, row=1)
+        ttk.Entry(frm, textvariable=edited_user_name).grid(column=1, row=1)
+        ttk.Label(frm, text=f"Current User email: {user.user_email}").grid(column=0, row=2)
+        ttk.Entry(frm, textvariable=edited_user_email).grid(column=1, row=2)
+        ttk.Button(frm, text="Confirm", command=lambda:[parent.withdraw(), task_window.withdraw(), self.confirm_edit_user(edited_user_name, edited_user_email, user, task_window, parent)]).grid(column=0, row=4)
+        ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=1, row=4)
+        task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
+
+    
+    def confirm_edit_user(self, edited_user_name, edited_user_email, user_to_edit, parent, grandparent):
+        if edited_user_name.get():
+            user_name = edited_user_name.get()
+        else:
+            user_name = user_to_edit.user_name
+        if edited_user_email.get():
+            user_email = edited_user_email.get()
+        else:
+            user_email = user_to_edit.user_email
+        confirm = messagebox.askyesno(message=f"If you confirm this edit the new user values will be:\nUser name: {user_name}, User email: {user_email}", title="Edit user?")
+        if confirm:
+            parent.destroy()
+            grandparent.destroy()
+            if user_to_edit == self.current_user:
+                self.deselect_current_user()
+            user_to_edit.user_name = user_name
+            user_to_edit.user_email = user_email
+            session.commit()
+            if edited_user_email.get():
+                self.update_draft_new_email(user_email, user_to_edit)
+            self.root.deiconify()
         else:
             self.return_win(parent)
 
@@ -442,6 +488,9 @@ class OrganiserApp():
         return window.geometry('+%d+%d' % (x, y))
 
 
+    '''
+    Draft functions
+    '''
     def send_to_draft(self, task_desc, task_deadline):
         time_until_deadline = task_deadline + timedelta(days=1) # pass to cloud db
         email_content = f'This is a gentle reminder that on {self.simple_date(task_deadline)} you have the task with the description: "{task_desc}",\nwhich is tomorrow!'
@@ -457,6 +506,11 @@ class OrganiserApp():
 
     def delete_draft(self, draft_id):
         self.dm.delete_draft(draft_id)
+
+
+    def update_draft_new_email(self, new_email, user):
+        for task in user.tasks.filter(Task.draft_id.isnot(None)):
+            self.dm.update_draft_email_only(new_email, task.draft_id)
 
 
 if __name__ == '__main__':
