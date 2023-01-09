@@ -8,7 +8,7 @@ from tkcalendar import Calendar
 class OrganiserApp():
 
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.root = Tk()
         self.dm = DraftManager()
         self.root.title("Organiser")
@@ -16,7 +16,7 @@ class OrganiserApp():
         self.current_profile_name = StringVar()
     
 
-    def app_running(self):
+    def app_running(self) -> None:
         self.win_geometry(300, 400, self.root)
         frm = ttk.Frame(self.root, padding=10)
         frm.grid()
@@ -36,7 +36,7 @@ class OrganiserApp():
         self.root.mainloop()
 
 
-    def calendar_view(self):
+    def calendar_view(self) -> None:
         def pass_date(i):
             self.cal_tasks(cal.get_date(), tasks)
         cal_window = Toplevel(self.root)
@@ -55,8 +55,8 @@ class OrganiserApp():
         cal_window.protocol("WM_DELETE_WINDOW", lambda:[cal_window.destroy(), self.root.destroy()])
 
 
-    def cal_tasks(self, date, tasks_str):
-        date = datetime.strptime(date, "%d/%m/%Y").date()
+    def cal_tasks(self, str_date: str, tasks_str: str) -> None:
+        date = datetime.strptime(str_date, "%d/%m/%Y").date()
         if self.current_user.tasks.filter(Task.deadline==date).count() > 0:
             tasks = ""
             for model in self.current_user.tasks.filter(Task.deadline==date):
@@ -69,7 +69,7 @@ class OrganiserApp():
     '''
     User table functions
     '''
-    def user_select_create_window(self):
+    def user_select_create_window(self) -> None:
         if self.current_user == None:
             self.root.withdraw()
             task_window = Toplevel(self.root)
@@ -87,7 +87,7 @@ class OrganiserApp():
             task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.destroy()])
         
 
-    def select_user(self, parent):
+    def select_user(self, parent: Toplevel) -> None:
         task_window = Toplevel(self.root)
         self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
@@ -102,7 +102,7 @@ class OrganiserApp():
         task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.destroy()])
 
 
-    def create_user_window(self, parent):
+    def create_user_window(self, parent: Toplevel) -> None:
         task_window = Toplevel(self.root)
         self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
@@ -118,7 +118,7 @@ class OrganiserApp():
         task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.destroy()])
 
     
-    def create_user(self, new_user_name, new_user_email, parent):
+    def create_user(self, new_user_name: str, new_user_email: str, parent: Toplevel) -> None:
         if not new_user_name or not new_user_email:
             messagebox.showinfo(message="You need to enter both a user name and an email address")
             parent.deiconify()
@@ -136,7 +136,7 @@ class OrganiserApp():
         self.assign_current_user(new_user)
 
 
-    def edit_delete_user_window(self):
+    def edit_delete_user_window(self) -> None:
         task_window = Toplevel(self.root)
         self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
@@ -152,7 +152,7 @@ class OrganiserApp():
         task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.deiconify()])
 
 
-    def delete_user(self, user, parent):
+    def delete_user(self, user: User, parent: Toplevel) -> None:
         confirm = messagebox.askyesno(message=f"Are you sure you want to delete user profile: '{user.user_name}'", title="Delete profile?")
         if confirm:
             parent.destroy()
@@ -172,7 +172,7 @@ class OrganiserApp():
             self.return_win(parent)
 
 
-    def edit_user_new_value_window(self, user, parent):
+    def edit_user_new_value_window(self, user: User, parent: Toplevel) -> None:
         task_window = Toplevel(self.root)
         self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
@@ -189,7 +189,7 @@ class OrganiserApp():
         task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
     
-    def confirm_edit_user(self, edited_user_name, edited_user_email, user_to_edit, parent, grandparent):
+    def confirm_edit_user(self, edited_user_name: StringVar, edited_user_email: StringVar, user_to_edit: User, parent: Toplevel, grandparent: Toplevel) -> None:
         if edited_user_name.get():
             user_name = edited_user_name.get()
         else:
@@ -217,7 +217,7 @@ class OrganiserApp():
     '''
     Task table functions
     '''
-    def show_task(self):
+    def show_task(self) -> None:
         task_window = Toplevel(self.root)
         self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
@@ -232,7 +232,7 @@ class OrganiserApp():
         task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
         
 
-    def add_task_window(self, parent, cal_deadline=""):
+    def add_task_window(self, parent: Toplevel, cal_deadline="") -> None:
         if self.date_clean(cal_deadline) and self.date_clean(cal_deadline) < datetime.now().date():
             messagebox.showinfo(message="Sorry you can't add tasks with past dates")
             parent.deiconify()
@@ -257,7 +257,7 @@ class OrganiserApp():
             task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
     
-    def confirm_add(self, new_task_type, new_task_description, new_task_deadline, parent, grandparent):
+    def confirm_add(self, new_task_type: StringVar, new_task_description: StringVar, new_task_deadline: StringVar, parent: Toplevel, grandparent: Toplevel) -> None:
         clean_deadline = self.date_clean(new_task_deadline.get())
         task_draft_id = None
         if not new_task_type.get() or not new_task_description.get():
@@ -281,7 +281,7 @@ class OrganiserApp():
                 self.return_win(parent)
 
 
-    def edit_delete_task_window(self, parent, cal_date=None):
+    def edit_delete_task_window(self, parent: Toplevel, cal_date=None) -> None:
         task_window = Toplevel(self.root)
         self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
@@ -304,7 +304,7 @@ class OrganiserApp():
         task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
 
-    def delete_task(self, task, parent, grandparent):
+    def delete_task(self, task: Task, parent: Toplevel, grandparent: Toplevel) -> None:
         confirm = messagebox.askyesno(message=f"You have selected '{task}' task to delete. Is this correct?", title="Delete task?")
         if confirm:
             if task.draft_id:
@@ -325,7 +325,7 @@ class OrganiserApp():
             self.return_win(parent)
 
     
-    def edit_task(self, task, parent, grandparent):
+    def edit_task(self, task: Task, parent: Toplevel, grandparent: Toplevel) -> None:
         task_window = Toplevel(self.root)
         self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
@@ -345,7 +345,7 @@ class OrganiserApp():
         task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
 
-    def confirm_edit(self, edited_task_type, edited_task_description, edited_task_deadline, task_to_edit, parent, origin_window):
+    def confirm_edit(self, edited_task_type: StringVar, edited_task_description: StringVar, edited_task_deadline: StringVar, task_to_edit: Task, parent: Toplevel, origin_window: Toplevel) -> None:
         clean_deadline = self.date_clean(edited_task_deadline.get())
         if edited_task_type.get():
             type = edited_task_type.get()
@@ -384,7 +384,7 @@ class OrganiserApp():
             self.return_win(parent)
 
 
-    def urgent_task(self):
+    def urgent_task(self) -> None:
         urgent_time = datetime.now() + timedelta(days=3)
         urgent_time = urgent_time.date()
         current_time = datetime.now().date()
@@ -407,7 +407,7 @@ class OrganiserApp():
     '''
     Functions not for task or user creation/editing/deletion
     '''
-    def date_clean(self, date):
+    def date_clean(self, date: str)  -> None | datetime:
         for fmt in ["%d-%m-%Y", "%d.%m.%Y", "%d/%m/%Y", "%d %m %Y"]:
             try:
                 cleaned_date = datetime.strptime(date, fmt).date()
@@ -418,14 +418,14 @@ class OrganiserApp():
         return None
 
 
-    def bad_date_check(self):
+    def bad_date_check(self)  -> None | bool:
         if self.current_user != None:
             current_date = datetime.now().date()
             if (self.current_user.tasks.filter(Task.deadline.isnot(None)).filter(Task.deadline < current_date)).count() != 0:
                 return True
                 
 
-    def amend_bad_dates(self):
+    def amend_bad_dates(self) -> None:
         current_date = datetime.now().date()
         self.root.withdraw()
         task_window = Toplevel(self.root)
@@ -441,74 +441,74 @@ class OrganiserApp():
         task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
 
-    def user_assign_bad_date(self):
+    def user_assign_bad_date(self) -> None:
         if self.bad_date_check():
             self.amend_bad_dates()
         else:
             self.root.deiconify()
 
 
-    def return_win(self, current_parent):
+    def return_win(self, current_parent: Toplevel) -> None:
         if current_parent:
             current_parent.deiconify()
         else:
             self.root.deiconify()
 
 
-    def on_closing(self, current_window):
+    def on_closing(self, current_window: Toplevel) -> None:
         current_window.destroy()
         self.root.deiconify()
 
 
-    def simple_date(self, deadline):
+    def simple_date(self, deadline: datetime) -> str:
         if deadline:
             deadline = deadline.strftime("%d/%m/%Y")
         return deadline
 
     
-    def assign_current_user(self, user):
+    def assign_current_user(self, user: User) -> None:
         self.current_user = user
         self.profile_name_update()
         
 
-    def deselect_current_user(self):
+    def deselect_current_user(self) -> None:
         self.current_user = None
 
 
-    def profile_name_update(self):
+    def profile_name_update(self) -> None:
         if self.current_user:
             self.current_profile_name.set(self.current_user.user_name)
 
 
-    def win_geometry(self, width, height, window):
+    def win_geometry(self, width: int, height: int, window: Toplevel) -> None:
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         x = (sw/2) - (width/2)
         y = (sh/2) - (height/2)
-        return window.geometry('+%d+%d' % (x, y))
+        window.geometry('+%d+%d' % (x, y))
 
 
     '''
     Draft functions
     '''
-    def send_to_draft(self, task_desc, task_deadline):
+    def send_to_draft(self, task_desc: str, task_deadline: datetime) -> str:
         time_until_deadline = task_deadline + timedelta(days=1) # pass to cloud db
         email_content = f'This is a gentle reminder that on {self.simple_date(task_deadline)} you have the task with the description: "{task_desc}",\nwhich is tomorrow!'
         draft_id = self.dm.create_draft(email_content, self.current_user.user_email, 'A Gentle Reminder')
         return draft_id
         
 
-    def update_draft(self, updated_message, updated_deadline, draft_id):
+    def update_draft(self, updated_message: str, updated_deadline: datetime, draft_id: str) -> None:
         time_until_deadline = updated_deadline + timedelta(days=1) # pass to cloud db
         email_content = f'This is a gentle reminder that on {self.simple_date(updated_deadline)} you have the task with the description: "{updated_message}",\nwhich is tomorrow!'
         self.dm.update_draft(email_content, self.current_user.user_email, 'A Gentle Reminder', draft_id)
 
 
-    def delete_draft(self, draft_id):
+    def delete_draft(self, draft_id: str):
         self.dm.delete_draft(draft_id)
 
 
-    def update_draft_new_email(self, new_email, user):
+    def update_draft_new_email(self, new_email: str, user: User):
         for task in user.tasks.filter(Task.draft_id.isnot(None)):
             self.dm.update_draft_email_only(new_email, task.draft_id)
 
