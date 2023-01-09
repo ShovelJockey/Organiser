@@ -1,10 +1,9 @@
 from sqlalchemy import ForeignKey, create_engine, Column, Integer, String, Date
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 import calendar
-from datetime import datetime, timedelta
 
 
-engine = create_engine("sqlite:///organiser.db", echo=False)
+engine = create_engine("sqlite:////home/jamie/coding/Python/projects/Organiser/App/DB/organiser.db", echo=False)
 Session = sessionmaker(bind=engine)
 session = Session()
 Base = declarative_base()
