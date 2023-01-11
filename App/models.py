@@ -1,9 +1,10 @@
+import calendar
+import datetime
 from sqlalchemy import ForeignKey, create_engine, Column, Integer, String, Date
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
-import calendar
 
 
-engine = create_engine("sqlite:////home/jamie/coding/Python/projects/Organiser/App/DB/organiser.db", echo=False)
+engine = create_engine("postgres+psycopg2://postgres:pass@localhost:5432/organiser", echo=False)
 Session = sessionmaker(bind=engine)
 session = Session()
 Base = declarative_base()
@@ -15,7 +16,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     user_name = Column(String)
     user_email = Column(String)
-    tasks = relationship("Task", backref="Users", cascade="all, delete, delete-orphan", lazy='dynamic', passive_deletes=True)
+    tasks = relationship("Task", backref="Users", cascade="all, delete, delete-orphan", lazy="dynamic", passive_deletes=True)
 
 
     def __repr__(self):
