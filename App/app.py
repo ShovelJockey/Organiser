@@ -43,7 +43,7 @@ class OrganiserApp():
         self.win_geometry(300, 400, cal_window)
         date = StringVar(cal_window, Calendar.date.today().strftime("%d/%m/%y"))
         tasks = StringVar(cal_window)
-        cal = Calendar(cal_window, selectmode='day', textvariable=date)
+        cal = Calendar(cal_window, selectmode="day", textvariable=date)
         cal.pack()
         ttk.Label(cal_window, textvariable=date).pack(padx=10, pady=10)
         ttk.Label(cal_window, text="Tasks for this date:").pack(padx=5, pady=5)
@@ -66,9 +66,8 @@ class OrganiserApp():
         tasks_str.set(tasks)
 
 
-    '''
-    User table functions
-    '''
+##  User table functions ##
+    
     def user_select_create_window(self) -> None:
         if self.current_user == None:
             self.root.withdraw()
@@ -96,7 +95,7 @@ class OrganiserApp():
         x = 1
         for user in session.query(User):
             ttk.Label(frm, text=user.user_name).grid(column=0, row=x)
-            ttk.Button(frm, text='Select', command=lambda user=user:[task_window.destroy(), parent.destroy(), self.assign_current_user(user), self.user_assign_bad_date()]).grid(column=1, row=x)
+            ttk.Button(frm, text="Select", command=lambda user=user:[task_window.destroy(), parent.destroy(), self.assign_current_user(user), self.user_assign_bad_date()]).grid(column=1, row=x)
             x += 1
         ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), parent.deiconify()]).grid(column=0, row=x)
         task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.destroy()])
@@ -145,8 +144,8 @@ class OrganiserApp():
         x = 1
         for user in session.query(User):
             ttk.Label(frm, text=user.user_name).grid(column=0, row=x)
-            ttk.Button(frm, text='Delete', command=lambda user=user:[task_window.withdraw(), self.delete_user(user, task_window)]).grid(column=1, row=x)
-            ttk.Button(frm, text='Edit', command=lambda user=user:[task_window.withdraw(), self.edit_user_new_value_window(user, task_window)]).grid(column=1, row=x)
+            ttk.Button(frm, text="Delete", command=lambda user=user:[task_window.withdraw(), self.delete_user(user, task_window)]).grid(column=1, row=x)
+            ttk.Button(frm, text="Edit", command=lambda user=user:[task_window.withdraw(), self.edit_user_new_value_window(user, task_window)]).grid(column=1, row=x)
             x += 1
         ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.root.deiconify()]).grid(column=0, row=x)
         task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.deiconify()])
@@ -214,9 +213,8 @@ class OrganiserApp():
             self.return_win(parent)
 
 
-    '''
-    Task table functions
-    '''
+## Task table functions ##
+
     def show_task(self) -> None:
         task_window = Toplevel(self.root)
         self.win_geometry(300, 400, task_window)
@@ -291,16 +289,16 @@ class OrganiserApp():
         if cal_date is None:
             for task in self.current_user.tasks:
                 ttk.Label(frm, text=task).grid(column=0, row=x)
-                ttk.Button(frm, text='Edit', command=lambda task=task:[task_window.withdraw(), self.edit_task(task, task_window, parent)]).grid(column=1, row=x)
-                ttk.Button(frm, text='Delete', command=lambda task=task:[task_window.withdraw(), self.delete_task(task, task_window, parent)]).grid(column=2, row=x)
+                ttk.Button(frm, text="Edit", command=lambda task=task:[task_window.withdraw(), self.edit_task(task, task_window, parent)]).grid(column=1, row=x)
+                ttk.Button(frm, text="Delete", command=lambda task=task:[task_window.withdraw(), self.delete_task(task, task_window, parent)]).grid(column=2, row=x)
                 x +=1
         else:
             for task in self.current_user.tasks.filter(Task.deadline==cal_date):
                 ttk.Label(frm, text=task).grid(column=0, row=x)
-                ttk.Button(frm, text='Edit', command=lambda task=task:[task_window.withdraw(), self.edit_task(task, task_window, parent)]).grid(column=1, row=x)
-                ttk.Button(frm, text='Delete', command=lambda task=task:[task_window.withdraw(), self.delete_task(task, task_window, parent)]).grid(column=2, row=x)
+                ttk.Button(frm, text="Edit", command=lambda task=task:[task_window.withdraw(), self.edit_task(task, task_window, parent)]).grid(column=1, row=x)
+                ttk.Button(frm, text="Delete", command=lambda task=task:[task_window.withdraw(), self.delete_task(task, task_window, parent)]).grid(column=2, row=x)
                 x +=1
-        ttk.Button(frm, text='Return', command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=0, row=x)
+        ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=0, row=x)
         task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
 
@@ -404,9 +402,8 @@ class OrganiserApp():
         task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
 
-    '''
-    Functions not for task or user creation/editing/deletion
-    '''
+## Functions not for task or user creation/editing/deletion ##
+
     def date_clean(self, date: str)  -> None | datetime:
         for fmt in ["%d-%m-%Y", "%d.%m.%Y", "%d/%m/%Y", "%d %m %Y"]:
             try:
@@ -435,8 +432,8 @@ class OrganiserApp():
         x = 0
         for reminder in self.current_user.tasks.filter(Task.deadline.isnot(None)).filter(Task.deadline < current_date):
             ttk.Label(frm, text=f"{reminder.description} is scheduled to have already happened would you like to delete or edit this entry?").grid(column=0, row=x)
-            ttk.Button(frm, text='Edit task', command=lambda:[task_window.withdraw(), self.edit_task(reminder, task_window, self.root)]).grid(column=1, row=x)
-            ttk.Button(frm, text='Delete task', command=lambda:[task_window.withdraw(), self.delete_task(reminder, task_window, self.root)]).grid(column=2, row=x)
+            ttk.Button(frm, text="Edit task", command=lambda:[task_window.withdraw(), self.edit_task(reminder, task_window, self.root)]).grid(column=1, row=x)
+            ttk.Button(frm, text="Delete task", command=lambda:[task_window.withdraw(), self.delete_task(reminder, task_window, self.root)]).grid(column=2, row=x)
             x +=1
         task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
@@ -485,23 +482,20 @@ class OrganiserApp():
         sh = self.root.winfo_screenheight()
         x = (sw/2) - (width/2)
         y = (sh/2) - (height/2)
-        window.geometry('+%d+%d' % (x, y))
+        window.geometry("+%d+%d" % (x, y))
 
 
-    '''
-    Draft functions
-    '''
+## Draft functions ##
+
     def send_to_draft(self, task_desc: str, task_deadline: datetime) -> str:
-        time_until_deadline = task_deadline + timedelta(days=1) # pass to cloud db
-        email_content = f'This is a gentle reminder that on {self.simple_date(task_deadline)} you have the task with the description: "{task_desc}",\nwhich is tomorrow!'
-        draft_id = self.dm.create_draft(email_content, self.current_user.user_email, 'A Gentle Reminder')
+        email_content = f"This is a gentle reminder that on {self.simple_date(task_deadline)} you have the task with the description: '{task_desc}',\nwhich is tomorrow!"
+        draft_id = self.dm.create_draft(email_content, self.current_user.user_email, "A Gentle Reminder")
         return draft_id
         
 
     def update_draft(self, updated_message: str, updated_deadline: datetime, draft_id: str) -> None:
-        time_until_deadline = updated_deadline + timedelta(days=1) # pass to cloud db
-        email_content = f'This is a gentle reminder that on {self.simple_date(updated_deadline)} you have the task with the description: "{updated_message}",\nwhich is tomorrow!'
-        self.dm.update_draft(email_content, self.current_user.user_email, 'A Gentle Reminder', draft_id)
+        email_content = f"This is a gentle reminder that on {self.simple_date(updated_deadline)} you have the task with the description: '{updated_message}',\nwhich is tomorrow!"
+        self.dm.update_draft(email_content, self.current_user.user_email, "A Gentle Reminder", draft_id)
 
 
     def delete_draft(self, draft_id: str):
@@ -513,6 +507,6 @@ class OrganiserApp():
             self.dm.update_draft_email_only(new_email, task.draft_id)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = OrganiserApp()
     app.app_running()
