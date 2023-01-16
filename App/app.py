@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from draft_manager import DraftManager
-from models import User, Task, session
+from models import models
 from tkinter import Tk, ttk, Toplevel, StringVar, messagebox
 from tkcalendar import Calendar
 
@@ -57,9 +57,9 @@ class OrganiserApp():
 
     def cal_tasks(self, str_date: str, tasks_str: str) -> None:
         date = datetime.strptime(str_date, "%d/%m/%Y").date()
-        if self.current_user.tasks.filter(Task.deadline==date).count() > 0:
+        if self.current_user.tasks.filter(models.Task.deadline==date).count() > 0:
             tasks = ""
-            for model in self.current_user.tasks.filter(Task.deadline==date):
+            for model in self.current_user.tasks.filter(models.Task.deadline==date):
                 tasks = tasks + "-" + model.task_type + ", " + model.description + "\n"
         else:
             tasks = "No tasks"
@@ -75,7 +75,7 @@ class OrganiserApp():
             self.win_geometry(300, 400, task_window)
             frm = ttk.Frame(task_window, padding=10)
             frm.grid()
-            if session.query(User).count():
+            if models.session.query(models.User).count():
                 ttk.Label(frm, text="Select a user profile or create a new one").grid(column=0, row=0, padx=5, pady=5)
                 ttk.Button(frm, text="Select existing profile", command=lambda:[task_window.withdraw, self.select_user(task_window)]).grid(column=0, row=1, padx=5, pady=5)
                 ttk.Button(frm, text="Create new profile", command=lambda:[task_window.withdraw(), self.create_user_window(task_window)]).grid(column=0, row=2, padx=5, pady=5)
@@ -93,7 +93,7 @@ class OrganiserApp():
         frm.grid()
         ttk.Label(frm, text="Select one of the existing profiles").grid(column=0, row=0)
         x = 1
-        for user in session.query(User):
+        for user in models.session.query(models.User):
             ttk.Label(frm, text=user.user_name).grid(column=0, row=x)
             ttk.Button(frm, text="Select", command=lambda user=user:[task_window.destroy(), parent.destroy(), self.assign_current_user(user), self.user_assign_bad_date()]).grid(column=1, row=x)
             x += 1
@@ -122,15 +122,15 @@ class OrganiserApp():
             messagebox.showinfo(message="You need to enter both a user name and an email address")
             parent.deiconify()
             return
-        for user in session.query(User):
+        for user in models.session.query(models.User):
             if user.user_name == new_user_name:
                 messagebox.showinfo(message="Profile of same name already found, profile has not been created")
                 parent.deiconify()
                 return
         parent.destroy()
-        new_user = User(user_name=new_user_name, user_email=new_user_email)
-        session.add(new_user)
-        session.commit()
+        new_user = models.User(user_name=new_user_name, user_email=new_user_email)
+        models.session.add(new_user)
+        models.session.commit()
         messagebox.showinfo(message="Profile created!")
         self.assign_current_user(new_user)
 
@@ -142,7 +142,7 @@ class OrganiserApp():
         frm.grid()
         ttk.Label(frm, text="Select a profile to Delete or Edit").grid(column=0, row=0)
         x = 1
-        for user in session.query(User):
+        for user in models.session.query(models.User):
             ttk.Label(frm, text=user.user_name).grid(column=0, row=x)
             ttk.Button(frm, text="Delete", command=lambda user=user:[task_window.withdraw(), self.delete_user(user, task_window)]).grid(column=1, row=x)
             ttk.Button(frm, text="Edit", command=lambda user=user:[task_window.withdraw(), self.edit_user_new_value_window(user, task_window)]).grid(column=1, row=x)
@@ -151,7 +151,7 @@ class OrganiserApp():
         task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.deiconify()])
 
 
-    def delete_user(self, user: User, parent: Toplevel) -> None:
+    def delete_user(self, user: models.User, parent: Toplevel) -> None:
         confirm = messagebox.askyesno(message=f"Are you sure you want to delete user profile: '{user.user_name}'", title="Delete profile?")
         if confirm:
             parent.destroy()
@@ -160,8 +160,8 @@ class OrganiserApp():
             for task in user.tasks:
                 if task.draft_id:
                     self.delete_draft(task.draft_id)
-            session.delete(user)
-            session.commit()
+            models.session.delete(user)
+            models.session.commit()
             messagebox.showinfo(message="Profile deleted")
             if self.current_user:
                 self.root.deiconify()
@@ -171,7 +171,7 @@ class OrganiserApp():
             self.return_win(parent)
 
 
-    def edit_user_new_value_window(self, user: User, parent: Toplevel) -> None:
+    def edit_user_new_value_window(self, user: models.User, parent: Toplevel) -> None:
         task_window = Toplevel(self.root)
         self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
@@ -188,7 +188,7 @@ class OrganiserApp():
         task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
     
-    def confirm_edit_user(self, edited_user_name: StringVar, edited_user_email: StringVar, user_to_edit: User, parent: Toplevel, grandparent: Toplevel) -> None:
+    def confirm_edit_user(self, edited_user_name: StringVar, edited_user_email: StringVar, user_to_edit: models.User, parent: Toplevel, grandparent: Toplevel) -> None:
         if edited_user_name.get():
             user_name = edited_user_name.get()
         else:
@@ -205,7 +205,7 @@ class OrganiserApp():
                 self.deselect_current_user()
             user_to_edit.user_name = user_name
             user_to_edit.user_email = user_email
-            session.commit()
+            models.session.commit()
             if edited_user_email.get():
                 self.update_draft_new_email(user_email, user_to_edit)
             self.root.deiconify()
@@ -269,9 +269,9 @@ class OrganiserApp():
             if confirm:
                 if clean_deadline:
                     task_draft_id = self.send_to_draft(new_task_description.get(), clean_deadline)
-                new_task = Task(task_type = new_task_type.get(), description=new_task_description.get(), deadline=clean_deadline, user_id=self.current_user.id, draft_id=task_draft_id)
-                session.add(new_task)
-                session.commit()
+                new_task = models.Task(task_type = new_task_type.get(), description=new_task_description.get(), deadline=clean_deadline, user_id=self.current_user.id, draft_id=task_draft_id)
+                models.session.add(new_task)
+                models.session.commit()
                 parent.destroy()
                 messagebox.showinfo(message="Task added!")
                 grandparent.deiconify()
@@ -293,7 +293,7 @@ class OrganiserApp():
                 ttk.Button(frm, text="Delete", command=lambda task=task:[task_window.withdraw(), self.delete_task(task, task_window, parent)]).grid(column=2, row=x)
                 x +=1
         else:
-            for task in self.current_user.tasks.filter(Task.deadline==cal_date):
+            for task in self.current_user.tasks.filter(models.Task.deadline==cal_date):
                 ttk.Label(frm, text=task).grid(column=0, row=x)
                 ttk.Button(frm, text="Edit", command=lambda task=task:[task_window.withdraw(), self.edit_task(task, task_window, parent)]).grid(column=1, row=x)
                 ttk.Button(frm, text="Delete", command=lambda task=task:[task_window.withdraw(), self.delete_task(task, task_window, parent)]).grid(column=2, row=x)
@@ -302,13 +302,13 @@ class OrganiserApp():
         task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
 
-    def delete_task(self, task: Task, parent: Toplevel, grandparent: Toplevel) -> None:
+    def delete_task(self, task: models.Task, parent: Toplevel, grandparent: Toplevel) -> None:
         confirm = messagebox.askyesno(message=f"You have selected '{task}' task to delete. Is this correct?", title="Delete task?")
         if confirm:
             if task.draft_id:
                 self.delete_draft(task.draft_id)       
-            session.delete(task)
-            session.commit()
+            models.session.delete(task)
+            models.session.commit()
             parent.destroy()
             messagebox.showinfo(message="Task deleted!")
             if self.bad_date_check():
@@ -323,7 +323,7 @@ class OrganiserApp():
             self.return_win(parent)
 
     
-    def edit_task(self, task: Task, parent: Toplevel, grandparent: Toplevel) -> None:
+    def edit_task(self, task: models.Task, parent: Toplevel, grandparent: Toplevel) -> None:
         task_window = Toplevel(self.root)
         self.win_geometry(300, 400, task_window)
         frm = ttk.Frame(task_window, padding=10)
@@ -343,7 +343,7 @@ class OrganiserApp():
         task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
 
-    def confirm_edit(self, edited_task_type: StringVar, edited_task_description: StringVar, edited_task_deadline: StringVar, task_to_edit: Task, parent: Toplevel, origin_window: Toplevel) -> None:
+    def confirm_edit(self, edited_task_type: StringVar, edited_task_description: StringVar, edited_task_deadline: StringVar, task_to_edit: models.Task, parent: Toplevel, origin_window: Toplevel) -> None:
         clean_deadline = self.date_clean(edited_task_deadline.get())
         if edited_task_type.get():
             type = edited_task_type.get()
@@ -371,7 +371,7 @@ class OrganiserApp():
             task_to_edit.task_type = type
             task_to_edit.description = description
             task_to_edit.deadline = deadline
-            session.commit()
+            models.session.commit()
             parent.destroy()
             messagebox.showinfo(message="Task edited!")
             if self.bad_date_check():
@@ -391,8 +391,8 @@ class OrganiserApp():
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
         x = 0
-        if (self.current_user.tasks.filter(Task.deadline.isnot(None)).filter(Task.deadline <= urgent_time)).count() != 0:
-            for reminder in self.current_user.tasks.filter(Task.deadline.isnot(None)).filter(Task.deadline <= urgent_time):
+        if (self.current_user.tasks.filter(models.Task.deadline.isnot(None)).filter(models.Task.deadline <= urgent_time)).count() != 0:
+            for reminder in self.current_user.tasks.filter(models.Task.deadline.isnot(None)).filter(models.Task.deadline <= urgent_time):
                 ttk.Label(frm, text=reminder).grid(column=0, row=x)
                 ttk.Label(frm, text=f"This is in {reminder.deadline - current_time}").grid(column=0, row=x+1)
                 x +=1
@@ -418,7 +418,7 @@ class OrganiserApp():
     def bad_date_check(self)  -> None | bool:
         if self.current_user != None:
             current_date = datetime.now().date()
-            if (self.current_user.tasks.filter(Task.deadline.isnot(None)).filter(Task.deadline < current_date)).count() != 0:
+            if (self.current_user.tasks.filter(models.Task.deadline.isnot(None)).filter(models.Task.deadline < current_date)).count() != 0:
                 return True
                 
 
@@ -430,7 +430,7 @@ class OrganiserApp():
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
         x = 0
-        for reminder in self.current_user.tasks.filter(Task.deadline.isnot(None)).filter(Task.deadline < current_date):
+        for reminder in self.current_user.tasks.filter(models.Task.deadline.isnot(None)).filter(models.Task.deadline < current_date):
             ttk.Label(frm, text=f"{reminder.description} is scheduled to have already happened would you like to delete or edit this entry?").grid(column=0, row=x)
             ttk.Button(frm, text="Edit task", command=lambda:[task_window.withdraw(), self.edit_task(reminder, task_window, self.root)]).grid(column=1, row=x)
             ttk.Button(frm, text="Delete task", command=lambda:[task_window.withdraw(), self.delete_task(reminder, task_window, self.root)]).grid(column=2, row=x)
@@ -463,7 +463,7 @@ class OrganiserApp():
         return deadline
 
     
-    def assign_current_user(self, user: User) -> None:
+    def assign_current_user(self, user: models.User) -> None:
         self.current_user = user
         self.profile_name_update()
         
@@ -502,8 +502,8 @@ class OrganiserApp():
         self.dm.delete_draft(draft_id)
 
 
-    def update_draft_new_email(self, new_email: str, user: User):
-        for task in user.tasks.filter(Task.draft_id.isnot(None)):
+    def update_draft_new_email(self, new_email: str, user: models.User):
+        for task in user.tasks.filter(models.Task.draft_id.isnot(None)):
             self.dm.update_draft_email_only(new_email, task.draft_id)
 
 
