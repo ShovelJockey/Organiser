@@ -391,8 +391,9 @@ class OrganiserApp():
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
         x = 0
-        if (self.current_user.tasks.filter(models.Task.deadline.isnot(None)).filter(models.Task.deadline <= urgent_time)).count() != 0:
-            for reminder in self.current_user.tasks.filter(models.Task.deadline.isnot(None)).filter(models.Task.deadline <= urgent_time):
+        urgent_tasks = self.current_user.tasks.filter((models.Task.deadline.isnot(None)) & (models.Task.deadline <= urgent_time))
+        if (urgent_tasks).count() != 0:
+            for reminder in urgent_tasks:
                 ttk.Label(frm, text=reminder).grid(column=0, row=x)
                 ttk.Label(frm, text=f"This is in {reminder.deadline - current_time}").grid(column=0, row=x+1)
                 x +=1
@@ -418,7 +419,7 @@ class OrganiserApp():
     def bad_date_check(self)  -> None | bool:
         if self.current_user != None:
             current_date = datetime.now().date()
-            if (self.current_user.tasks.filter(models.Task.deadline.isnot(None)).filter(models.Task.deadline < current_date)).count() != 0:
+            if (self.current_user.tasks.filter((models.Task.deadline.isnot(None)) & (models.Task.deadline < current_date))).count() != 0:
                 return True
                 
 
@@ -430,7 +431,7 @@ class OrganiserApp():
         frm = ttk.Frame(task_window, padding=10)
         frm.grid()
         x = 0
-        for reminder in self.current_user.tasks.filter(models.Task.deadline.isnot(None)).filter(models.Task.deadline < current_date):
+        for reminder in self.current_user.tasks.filter((models.Task.deadline.isnot(None)) & (models.Task.deadline < current_date)):
             ttk.Label(frm, text=f"{reminder.description} is scheduled to have already happened would you like to delete or edit this entry?").grid(column=0, row=x)
             ttk.Button(frm, text="Edit task", command=lambda:[task_window.withdraw(), self.edit_task(reminder, task_window, self.root)]).grid(column=1, row=x)
             ttk.Button(frm, text="Delete task", command=lambda:[task_window.withdraw(), self.delete_task(reminder, task_window, self.root)]).grid(column=2, row=x)
