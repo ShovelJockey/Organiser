@@ -494,18 +494,20 @@ class OrganiserApp():
         return draft_id
         
 
-    def update_draft(self, updated_message: str, updated_deadline: datetime, draft_id: str) -> None:
+    def update_draft(self, updated_message: str, updated_deadline: datetime, draft_id: str) -> bool:
         email_content = f"This is a gentle reminder that on {self.simple_date(updated_deadline)} you have the task with the description: '{updated_message}',\nwhich is tomorrow!"
-        self.dm.update_draft(email_content, self.current_user.user_email, "A Gentle Reminder", draft_id)
+        return self.dm.update_draft(email_content, self.current_user.user_email, "A Gentle Reminder", draft_id)
 
 
-    def delete_draft(self, draft_id: str):
-        self.dm.delete_draft(draft_id)
+    def delete_draft(self, draft_id: str) -> bool:
+        return self.dm.delete_draft(draft_id)
 
 
-    def update_draft_new_email(self, new_email: str, user: models.User):
+    def update_draft_new_email(self, new_email: str, user: models.User) -> bool:
         for task in user.tasks.filter(models.Task.draft_id.isnot(None)):
-            self.dm.update_draft_email_only(new_email, task.draft_id)
+            if not self.dm.update_draft_email_only(new_email, task.draft_id):
+                return False
+        return True
 
 
 if __name__ == "__main__":
