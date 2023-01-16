@@ -1,0 +1,11 @@
+[Unit]
+Description=executes draft check script
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash /home/organiser/Server/draft_check.py
+Restart=on-failure
+RestartSec=5
+User=root
+Group=root

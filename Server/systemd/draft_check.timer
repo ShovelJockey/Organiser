@@ -1,0 +1,11 @@
+[Unit]
+Description=executes draft check script
+After=multi-user.target
+
+[Timer]
+OnCalendar=*-*-* *:00:00
+Persistent=True
+Unit=draft_check.service
+
+[Install]
+WantedBy=timers.target
