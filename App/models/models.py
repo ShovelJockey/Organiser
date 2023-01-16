@@ -1,10 +1,10 @@
 import calendar
 import datetime
-from sqlalchemy import ForeignKey, create_engine, Column, Integer, String, Date
+from sqlalchemy import ForeignKey, create_engine, Column, Integer, String, Date, Boolean
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 
 
-engine = create_engine("postgres+psycopg2://postgres:pass@localhost:5432/organiser", echo=False)
+engine = create_engine("postgresql+psycopg2://postgres:pass@localhost:5432/organiser", echo=False)
 Session = sessionmaker(bind=engine)
 session = Session()
 Base = declarative_base()
@@ -32,6 +32,7 @@ class Task(Base):
     deadline = Column(Date, nullable=True)
     user_id = Column(Integer, ForeignKey("Users.id"), nullable=False)
     draft_id = Column(String, nullable=True)
+    draft_sent = Column(Boolean, default=False)
 
 
     def __repr__(self):
