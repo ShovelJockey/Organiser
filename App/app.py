@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from draft_manager import DraftManager
 from models import models
 from tkinter import Tk, ttk, Toplevel, StringVar, messagebox
 from tkcalendar import Calendar
@@ -10,7 +9,6 @@ class OrganiserApp():
 
 	def __init__(self) -> None:
 		self.root = Tk()
-		self.dm = DraftManager()
 		self.root.title("Organiser")
 		self.current_user = None
 		self.current_profile_name = StringVar()
@@ -154,11 +152,6 @@ class OrganiserApp():
 	def delete_user(self, user: models.User, parent: Toplevel) -> None:
 		confirm = messagebox.askyesno(message=f"Are you sure you want to delete user profile: '{user.user_name}'", title="Delete profile?")
 		if confirm:
-			for task in user.tasks.filter(models.Task.draft_id.isnot(None)):
-				delete_success = self.delete_draft(task.draft_id)
-				if not delete_success:
-					self.draft_error_handle(draft_type="delete draft", parent_window=parent)
-					return
 			parent.destroy()
 			if user == self.current_user:
 				self.deselect_current_user()
@@ -201,11 +194,6 @@ class OrganiserApp():
 			user_email = user_to_edit.user_email
 		confirm = messagebox.askyesno(message=f"If you confirm this edit the new user values will be:\nUser name: {user_name}, User email: {user_email}", title="Edit user?")
 		if confirm:
-			if edited_user_email.get():
-				email_edit_success = self.update_draft_new_email(user_email, user_to_edit)
-				if not email_edit_success:
-					self.draft_error_handle(draft_type="edit email", parent_window=parent)
-					return
 			parent.destroy()
 			grandparent.destroy()
 			if user_to_edit == self.current_user:
@@ -262,7 +250,6 @@ class OrganiserApp():
 	
 	def confirm_add(self, new_task_type: StringVar, new_task_description: StringVar, new_task_deadline: StringVar, parent: Toplevel, grandparent: Toplevel) -> None:
 		clean_deadline = self.date_clean(new_task_deadline.get())
-		task_draft_id = None
 		if not new_task_type.get() or not new_task_description.get():
 			messagebox.showinfo(message="Sorry both the task type and task description are needed to create a new task.\nPlease enter values for these fields")
 			parent.deiconify()
@@ -271,12 +258,7 @@ class OrganiserApp():
 			parent.deiconify()        
 		confirm = messagebox.askyesno(message=f"You have entered {new_task_type.get()} for the task type, {new_task_description.get()} for the task description and {self.simple_date(clean_deadline)} for the deadline. Is this correct?", title="check your info")
 		if confirm:
-			if clean_deadline:
-				task_draft_id = self.send_to_draft(new_task_description.get(), clean_deadline)
-				if not task_draft_id:
-					self.draft_error_handle(draft_type="create draft", parent_window=parent)
-					return
-			new_task = models.Task(task_type = new_task_type.get(), description=new_task_description.get(), deadline=clean_deadline, user_id=self.current_user.id, draft_id=task_draft_id)
+			new_task = models.Task(task_type = new_task_type.get(), description=new_task_description.get(), deadline=clean_deadline, user_id=self.current_user.id)
 			models.session.add(new_task)
 			models.session.commit()
 			parent.destroy()
@@ -312,11 +294,6 @@ class OrganiserApp():
 	def delete_task(self, task: models.Task, parent: Toplevel, grandparent: Toplevel) -> None:
 		confirm = messagebox.askyesno(message=f"You have selected '{task}' task to delete. Is this correct?", title="Delete task?")
 		if confirm:
-			if task.draft_id:
-				delete_success = self.delete_draft(task.draft_id)
-				if not delete_success:
-					self.draft_error_handle(draft_type="delete draft", parent_window=parent)
-					return
 			models.session.delete(task)
 			models.session.commit()
 			parent.destroy()
@@ -372,18 +349,7 @@ class OrganiserApp():
 		else:
 			deadline = task_to_edit.deadline
 		confirm = messagebox.askyesno(message=f"If you confirm this edit the new task values will be:\nTask type: {type}, Description: {description}, Deadline: {self.simple_date(deadline)}", title="Edit task?")
-		if confirm:
-			if deadline and task_to_edit.deadline:
-				update_success = self.update_draft(description, deadline, task_to_edit.draft_id)
-				if not update_success:
-					self.draft_error_handle(draft_type="update draft", parent_window=parent)
-					return
-			if deadline and not task_to_edit.draft_id:
-				draft_id = self.send_to_draft(description, deadline)
-				if not draft_id:
-					self.draft_error_handle(draft_type="create draft", parent_window=parent)
-					return
-				task_to_edit.draft_id = draft_id           
+		if confirm:        
 			task_to_edit.task_type = type
 			task_to_edit.description = description
 			task_to_edit.deadline = deadline
@@ -500,35 +466,6 @@ class OrganiserApp():
 		x = (sw/2) - (width/2)
 		y = (sh/2) - (height/2)
 		window.geometry("+%d+%d" % (x, y))
-
-
-## Draft functions ##
-
-	def send_to_draft(self, task_desc: str, task_deadline: datetime) -> str | None:
-		email_content = f"This is a gentle reminder that on {self.simple_date(task_deadline)} you have the task with the description: '{task_desc}',\nwhich is tomorrow!"
-		draft_id = self.dm.create_draft(email_content, self.current_user.user_email, "A Gentle Reminder")
-		return draft_id
-		
-
-	def update_draft(self, updated_message: str, updated_deadline: datetime, draft_id: str) -> bool:
-		email_content = f"This is a gentle reminder that on {self.simple_date(updated_deadline)} you have the task with the description: '{updated_message}',\nwhich is tomorrow!"
-		return self.dm.update_draft(email_content, self.current_user.user_email, "A Gentle Reminder", draft_id)
-
-
-	def delete_draft(self, draft_id: str) -> bool:
-		return self.dm.delete_draft(draft_id)
-
-
-	def update_draft_new_email(self, new_email: str, user: models.User) -> bool:
-		for task in user.tasks.filter(models.Task.draft_id.isnot(None)):
-			if not self.dm.update_draft_email_only(new_email, task.draft_id):
-				return False
-		return True
-
-	
-	def draft_error_handle(self, draft_type: str, parent_window: Toplevel) -> None:
-		messagebox.showinfo(message=f"Error encountered when trying to connect to draft server, cannot complete {draft_type}")
-		parent_window.deiconify()
 
 
 if __name__ == "__main__":
