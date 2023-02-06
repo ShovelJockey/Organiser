@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, _Time, _Date, time
 from models import models
 from tkinter import Tk, ttk, Toplevel, StringVar, messagebox
 from tkcalendar import Calendar
@@ -15,6 +15,9 @@ class OrganiserApp():
 	
 
 	def app_running(self) -> None:
+		'''
+		Main app window only closes when program does, otherwise is withdrawn.
+		'''
 		self.win_geometry(300, 400, self.root)
 		frm = ttk.Frame(self.root, padding=10)
 		frm.grid()
@@ -234,31 +237,47 @@ class OrganiserApp():
 			frm.grid()
 			new_task_type = StringVar()
 			new_task_description = StringVar()
-			new_task_deadline = StringVar()
-			new_task_deadline.set(cal_deadline)
+			new_task_date = StringVar()
+			new_task_time = StringVar()
+			new_task_date.set(cal_deadline)
 			ttk.Label(frm, text="Add a new task").grid(column=0, row=0)
 			ttk.Label(frm, text="Enter what type of task").grid(column=0, row=1)
 			ttk.Entry(frm, textvariable=new_task_type).grid(column=1, row=1)
 			ttk.Label(frm, text="Enter a brief description of the task").grid(column=0, row=2)
 			ttk.Entry(frm, textvariable=new_task_description).grid(column=1, row=2)
-			ttk.Label(frm, text="Enter the task deadline, if it has one. Enter the date in numerical day-month-year format ie 22/07/1992").grid(column=0, row=3)
-			ttk.Entry(frm, textvariable=new_task_deadline).grid(column=1, row=3)
-			ttk.Button(frm, text="Confirm", command=lambda:[task_window.withdraw(), self.confirm_add(new_task_type, new_task_description, new_task_deadline, task_window, parent)]).grid(column=0, row=4)
-			ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=1, row=4)
+			ttk.Label(frm, text="Enter the task date, this is optional. Enter the date in numerical day-month-year format ie 22/07/1992").grid(column=0, row=3)
+			ttk.Entry(frm, textvariable=new_task_date).grid(column=1, row=3)
+			ttk.Label(frm, text="Enter the task time, this is optional but requires a date. Enter time in 24 hour format ie 20:30").grid(column=0, row=4)
+			ttk.Entry(frm, textvariable=new_task_time).grid(column=1, row=4)
+			ttk.Button(frm, text="Confirm", command=lambda:[task_window.withdraw(), self.confirm_add(new_task_type, new_task_description, new_task_date, new_task_time, task_window, parent)]).grid(column=0, row=5)
+			ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=1, row=5)
 			task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
 	
-	def confirm_add(self, new_task_type: StringVar, new_task_description: StringVar, new_task_deadline: StringVar, parent: Toplevel, grandparent: Toplevel) -> None:
-		clean_deadline = self.date_clean(new_task_deadline.get())
+	def confirm_add(self, new_task_type: StringVar, new_task_description: StringVar, new_task_date: StringVar, new_task_time: StringVar, parent: Toplevel, grandparent: Toplevel) -> None:
+
 		if not new_task_type.get() or not new_task_description.get():
 			messagebox.showinfo(message="Sorry both the task type and task description are needed to create a new task.\nPlease enter values for these fields")
 			parent.deiconify()
-		elif clean_deadline < datetime.now().date():
+
+		deadline = self.date_clean(new_task_date.get())
+		if deadline < datetime.now().date():
 			messagebox.showinfo(message="Sorry you can't add tasks with past dates")
-			parent.deiconify()        
-		confirm = messagebox.askyesno(message=f"You have entered {new_task_type.get()} for the task type, {new_task_description.get()} for the task description and {self.simple_date(clean_deadline)} for the deadline. Is this correct?", title="check your info")
+			parent.deiconify()
+
+		clean_time = self.time_clean(new_task_time.get())
+		if clean_time and not deadline:
+			messagebox.showinfo(message="Sorry you can't add tasks with a time but no valid date")
+			parent.deiconify()
+		elif deadline and clean_time:
+			deadline = datetime.combine(deadline, clean_time)
+		elif deadline and not clean_time:
+			default_time = time(0,0,0)
+			deadline = datetime.combine(deadline, default_time)
+
+		confirm = messagebox.askyesno(message=f"You have entered {new_task_type.get()} for the task type, {new_task_description.get()} for the task description and {self.simple_date(deadline)} for the deadline. Is this correct?", title="check your info")
 		if confirm:
-			new_task = models.Task(task_type = new_task_type.get(), description=new_task_description.get(), deadline=clean_deadline, user_id=self.current_user.id)
+			new_task = models.Task(task_type = new_task_type.get(), description=new_task_description.get(), deadline=deadline, user_id=self.current_user.id)
 			models.session.add(new_task)
 			models.session.commit()
 			parent.destroy()
@@ -387,15 +406,24 @@ class OrganiserApp():
 
 ## Functions not for task or user creation/editing/deletion ##
 
-	def date_clean(self, date: str)  -> None | datetime:
+	def date_clean(self, date: str)  -> None | _Date:
 		for fmt in ["%d-%m-%Y", "%d.%m.%Y", "%d/%m/%Y", "%d %m %Y"]:
 			try:
-				cleaned_date = datetime.strptime(date, fmt).date()
+				date_object = datetime.strptime(date, fmt).date()
 			except ValueError:
-				pass
+				continue
 			else:
-				return cleaned_date
+				return date_object
 		return None
+
+
+	def time_clean(self, time: str) -> None | _Time:
+		try:
+			time_object = datetime.strptime(time, "%H:%M").time()
+		except ValueError:
+			return None
+		else:
+			return time_object
 
 
 	def bad_date_check(self)  -> None | bool:
@@ -441,8 +469,12 @@ class OrganiserApp():
 
 
 	def simple_date(self, deadline: datetime) -> str:
-		if deadline:
+		if not deadline:
+			return "No deadline"
+		if deadline.time() == time(0,0,0):
 			deadline = deadline.strftime("%d/%m/%Y")
+		else:
+			deadline = deadline.strftime("%d/%m/%Y :: %H:%M")
 		return deadline
 
 	
