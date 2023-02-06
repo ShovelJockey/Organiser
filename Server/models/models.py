@@ -1,6 +1,6 @@
 import calendar
 import datetime
-from sqlalchemy import ForeignKey, create_engine, Column, Integer, String, Date, Boolean
+from sqlalchemy import ForeignKey, create_engine, Column, Integer, String, Boolean, DateTime
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 
 
@@ -29,7 +29,7 @@ class Task(Base):
     id = Column(Integer, primary_key=True)
     task_type = Column(String)
     description = Column(String)
-    deadline = Column(Date, nullable=True)
+    deadline = Column(DateTime, nullable=True)
     user_id = Column(Integer, ForeignKey("Users.id"), nullable=False)
     reminder_sent = Column(Boolean, default=False)
 
