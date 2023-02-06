@@ -44,7 +44,7 @@ def logger(task_id, success) -> None:
     '''
     timestamp = int(time() * 1000000)
     data_to_log = f'{timestamp} : {success} : {task_id}\n'
-    with open(f'/var/log/{datetime.today().strftime("%Y-%m-%d")}-draft_log.txt', 'a') as log_file:
+    with open(f"/var/log/{datetime.today().strftime('%Y-%m-%d')}-draft_log.txt", "a") as log_file:
         log_file.write(data_to_log)
 
 
