@@ -401,8 +401,7 @@ class OrganiserApp():
 
 	def urgent_task(self) -> None:# account for date -> datetime
 		urgent_time = datetime.now() + timedelta(days=3)
-		urgent_time = urgent_time.date()
-		current_time = datetime.now().date()
+		current_time = datetime.now()
 		task_window = Toplevel(self.root)
 		self.win_geometry(300, 400, task_window)
 		frm = ttk.Frame(task_window, padding=10)
@@ -442,15 +441,15 @@ class OrganiserApp():
 			return time_object
 
 
-	def bad_date_check(self)  -> None | bool:# account for date -> datetime
+	def bad_date_check(self)  -> None | bool:
 		if self.current_user != None:
-			current_date = datetime.now().date()
+			current_date = datetime.now()
 			if (self.current_user.tasks.filter((models.Task.deadline.isnot(None)) & (models.Task.deadline < current_date))).count() != 0:
 				return True
 				
 
-	def amend_bad_dates(self) -> None:# account for date -> datetime
-		current_date = datetime.now().date()
+	def amend_bad_dates(self) -> None:
+		current_date = datetime.now()
 		self.root.withdraw()
 		task_window = Toplevel(self.root)
 		self.win_geometry(300, 400, task_window)
