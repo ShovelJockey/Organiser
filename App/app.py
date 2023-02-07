@@ -336,37 +336,53 @@ class OrganiserApp():
 		frm.grid()
 		edited_task_type = StringVar()
 		edited_task_description = StringVar()
-		edited_task_deadline = StringVar()
+		edited_task_date = StringVar()
+		edited_task_time = StringVar()
+		current_task_date = task.deadline.date().strftime("%d/%m/%Y")
+		current_task_time = task.deadline.time().strftime("%H:%M")
 		ttk.Label(frm, text="Enter new values in any field you wish to edit, otherwise leave them blank").grid(column=0, row=0)
 		ttk.Label(frm, text=f"Current type of task: {task.task_type}").grid(column=0, row=1)
 		ttk.Entry(frm, textvariable=edited_task_type).grid(column=1, row=1)
 		ttk.Label(frm, text=f"Current description: {task.description}").grid(column=0, row=2)
 		ttk.Entry(frm, textvariable=edited_task_description).grid(column=1, row=2)
-		ttk.Label(frm, text=f"Current deadline: {self.simple_date(task.deadline)}").grid(column=0, row=3)
-		ttk.Entry(frm, textvariable=edited_task_deadline).grid(column=1, row=3)
-		ttk.Button(frm, text="Confirm", command=lambda:[parent.destroy(), task_window.withdraw(), self.confirm_edit(edited_task_type, edited_task_description, edited_task_deadline, task, task_window, grandparent)]).grid(column=0, row=4)
-		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=1, row=4)
+		ttk.Label(frm, text=f"Current date: {current_task_date}").grid(column=0, row=3)
+		ttk.Entry(frm, textvariable=edited_task_date).grid(column=1, row=3)
+		ttk.Label(frm, text=f"Current time: {current_task_time}").grid(column=0, row=4)
+		ttk.Entry(frm, textvariable=edited_task_time).grid(column=1, row=4)		
+		ttk.Button(frm, text="Confirm", command=lambda:[parent.destroy(), task_window.withdraw(), self.confirm_edit(edited_task_type, edited_task_description, edited_task_date, edited_task_time, task, task_window, grandparent)]).grid(column=0, row=5)
+		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=1, row=5)
 		task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
 
-	def confirm_edit(self, edited_task_type: StringVar, edited_task_description: StringVar, edited_task_deadline: StringVar, task_to_edit: models.Task, parent: Toplevel, origin_window: Toplevel) -> None:
-		clean_deadline = self.date_clean(edited_task_deadline.get())
+	def confirm_edit(self, edited_task_type: StringVar, edited_task_description: StringVar, edited_task_date: StringVar, edited_task_time: StringVar, task_to_edit: models.Task, parent: Toplevel, origin_window: Toplevel) -> None:# account for date -> datetime
+		date_object = self.date_clean(edited_task_date.get())
+		time_object = self.time_clean(edited_task_time.get())
+
+		if date_object and date_object < datetime.now().date():
+			messagebox.showinfo(message="Sorry you can't edit a deadline to be a past date")
+			parent.deiconify()
+		
+		if date_object and time_object:
+			deadline = datetime.combine(date_object, time_object)
+		elif date_object and not time_object:
+			task_current_deadline = task_to_edit.deadline
+			deadline = datetime.combine(date_object, task_current_deadline.time())
+		elif not date_object and time_object:
+			task_current_deadline = task_to_edit.deadline
+			deadline = datetime.combine(task_current_deadline.date(), time_object)
+		else:
+			deadline = task_to_edit.deadline
+
 		if edited_task_type.get():
 			type = edited_task_type.get()
 		else:
 			type = task_to_edit.task_type
+
 		if edited_task_description.get():
 			description = edited_task_description.get()
 		else:
 			description = task_to_edit.description
-		if clean_deadline:
-			if clean_deadline > datetime.now().date():
-				deadline = clean_deadline
-			else:
-				messagebox.showinfo(message="Sorry you can't edit a deadline to be a past date")
-				parent.deiconify()
-		else:
-			deadline = task_to_edit.deadline
+
 		confirm = messagebox.askyesno(message=f"If you confirm this edit the new task values will be:\nTask type: {type}, Description: {description}, Deadline: {self.simple_date(deadline)}", title="Edit task?")
 		if confirm:        
 			task_to_edit.task_type = type
@@ -383,7 +399,7 @@ class OrganiserApp():
 			self.return_win(parent)
 
 
-	def urgent_task(self) -> None:
+	def urgent_task(self) -> None:# account for date -> datetime
 		urgent_time = datetime.now() + timedelta(days=3)
 		urgent_time = urgent_time.date()
 		current_time = datetime.now().date()
@@ -426,14 +442,14 @@ class OrganiserApp():
 			return time_object
 
 
-	def bad_date_check(self)  -> None | bool:
+	def bad_date_check(self)  -> None | bool:# account for date -> datetime
 		if self.current_user != None:
 			current_date = datetime.now().date()
 			if (self.current_user.tasks.filter((models.Task.deadline.isnot(None)) & (models.Task.deadline < current_date))).count() != 0:
 				return True
 				
 
-	def amend_bad_dates(self) -> None:
+	def amend_bad_dates(self) -> None:# account for date -> datetime
 		current_date = datetime.now().date()
 		self.root.withdraw()
 		task_window = Toplevel(self.root)
