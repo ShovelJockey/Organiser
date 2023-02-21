@@ -16,12 +16,17 @@ class OrganiserApp():
 
 	def app_running(self) -> None:
 		'''
-		Main app window only closes when program does, otherwise is withdrawn.
+		Creates main app window only closes when program does, otherwise is withdrawn.
 		'''
+		# define window geometry and create window frame for root window
 		self.win_geometry(300, 400, self.root)
 		frm = ttk.Frame(self.root, padding=10)
 		frm.grid()
+
+		# force user to create or select existing user
 		self.user_select_create_window()
+
+		# define labels and buttons
 		ttk.Label(frm, text="Welcome to my organiser app").grid(column=0, row=0, padx=5, pady=5)
 		ttk.Label(frm, text="Current profile:").grid(column=0, row=1, padx=5, pady=5)
 		ttk.Label(frm, textvariable=self.current_profile_name).grid(column=1, row=1, padx=5, pady=5)
@@ -33,37 +38,70 @@ class OrganiserApp():
 		ttk.Button(frm, text="Select or Create new profile", command=lambda:[self.deselect_current_user(), self.user_select_create_window()]).grid(column=0, row=7, padx=5, pady=5)
 		ttk.Button(frm, text="Delete or Edit existing profile", command=lambda:[self.root.withdraw(), self.edit_delete_user_window()]).grid(column=0, row=8, padx=5, pady=5)
 		ttk.Button(frm, text="Quit", command=self.root.destroy).grid(column=0, row=9, padx=5, pady=5)
+		
+		# protocol for X button in top window
 		self.root.protocol("WM_DELETE_WINDOW", lambda:[self.root.destroy()])
+
+		# equivilent to while loop preventing premature function end
 		self.root.mainloop()
 
 
 	def calendar_view(self) -> None:
+		'''
+		Create alendar view window, will load relevant tasks for selected day, 
+		and link through to task creation, editing and deletion windows for repective day.
+		'''
+		# define function to pass to bind function updating tasks to current selected dates
 		def pass_date(i):
 			self.cal_tasks(cal.get_date(), tasks)
+
+		# create window object
 		cal_window = Toplevel(self.root)
+
+		# define window geometry
 		self.win_geometry(300, 400, cal_window)
+
+		# create StringVar objects to capture user input
 		date = StringVar(cal_window, Calendar.date.today().strftime("%d/%m/%y"))
 		tasks = StringVar(cal_window)
+
+		# create tkinter Calendar object
 		cal = Calendar(cal_window, selectmode="day", textvariable=date)
 		cal.pack()
+
+		# define labels and buttons
 		ttk.Label(cal_window, textvariable=date).pack(padx=10, pady=10)
 		ttk.Label(cal_window, text="Tasks for this date:").pack(padx=5, pady=5)
 		ttk.Label(cal_window, textvariable=tasks).pack(padx=5, pady=5)
 		ttk.Button(cal_window, text="Add task to this date", command=lambda:[cal_window.withdraw(), self.add_task_window(cal_window, cal.get_date())]).pack(padx=5, pady=5)
 		ttk.Button(cal_window, text="Edit or Delete task on this date", command=lambda:[cal_window.withdraw(), self.edit_delete_task_window(cal_window, self.date_clean(cal.get_date()))]).pack(padx=5, pady=5)
 		ttk.Button(cal_window, text="Return", command=lambda:[cal_window.destroy(), self.root.deiconify()]).pack(padx=10, pady=10)
+		
+		# use get date function to update calendar tasks for the selected day info
 		cal.bind("<<CalendarSelected>>", pass_date)
+
+		# protocol for X button in window
 		cal_window.protocol("WM_DELETE_WINDOW", lambda:[cal_window.destroy(), self.root.destroy()])
 
 
-	def cal_tasks(self, str_date: str, tasks_str: str) -> None:
+	def cal_tasks(self, str_date: str, tasks_str: StringVar) -> None:
+		'''
+		Takes a string of the calendar date and a StringVar object.
+		String date is converted to datetime and used to filter all current user tasks,
+		task data is then concatenated into a string which is set as StringVar value.
+		'''
+		# convert string to datetime
 		date = datetime.strptime(str_date, "%d/%m/%Y").date()
+
+		# check if any tasks for date, if so iterate over concatenating task info into string
 		if self.current_user.tasks.filter(models.Task.deadline==date).count() > 0:
 			tasks = ""
 			for model in self.current_user.tasks.filter(models.Task.deadline==date):
 				tasks = tasks + "-" + model.task_type + ", " + model.description + "\n"
 		else:
 			tasks = "No tasks"
+
+		# set value of StringVar
 		tasks_str.set(tasks)
 
 
