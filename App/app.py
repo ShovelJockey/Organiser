@@ -108,97 +108,186 @@ class OrganiserApp():
 ##  User table functions ##
 	
 	def user_select_create_window(self) -> None:
+		'''
+		Intermediate window, if no current user then prompt user to select existing user or create one buttons,
+		calling select_user and create_user_window respectively.
+		'''
+		# if no assigned user
 		if self.current_user == None:
+
+			# withdraw root window
 			self.root.withdraw()
+
+			# create window object
 			task_window = Toplevel(self.root)
+
+			# define window geometry and create window Frame
 			self.win_geometry(300, 400, task_window)
 			frm = ttk.Frame(task_window, padding=10)
 			frm.grid()
+
+			# if any users in query prompt for either selection or creating new user
 			if models.session.query(models.User).count():
 				ttk.Label(frm, text="Select a user profile or create a new one").grid(column=0, row=0, padx=5, pady=5)
 				ttk.Button(frm, text="Select existing profile", command=lambda:[task_window.withdraw, self.select_user(task_window)]).grid(column=0, row=1, padx=5, pady=5)
 				ttk.Button(frm, text="Create new profile", command=lambda:[task_window.withdraw(), self.create_user_window(task_window)]).grid(column=0, row=2, padx=5, pady=5)
+			
+			# if no users only prompt for user creation
 			else:
 				ttk.Label(frm, text="No user profiles detected please create a new profile").grid(column=0, row=0, padx=5, pady=5)
 				ttk.Button(frm, text="Create new profile", command=lambda:[task_window.withdraw(), self.create_user_window(task_window)]).grid(column=0, row=1, padx=5, pady=5)
+
+			# quit buton returns to root window
 			ttk.Button(frm, text="Quit", command=lambda:[task_window.destroy(), self.root.destroy()]).grid(column=0, row=6, padx=5, pady=5)
+
+			# protocol for X button in window
 			task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.destroy()])
 		
 
 	def select_user(self, parent: Toplevel) -> None:
+		'''
+		Window that displays current users available for selection.
+		'''
+		# create window object
 		task_window = Toplevel(self.root)
+
+		# define window geometry and create window Frame
 		self.win_geometry(300, 400, task_window)
 		frm = ttk.Frame(task_window, padding=10)
 		frm.grid()
+
+		# define label objects, iterate through existing users assigning them to label and button objects with incrementing grid positioning
 		ttk.Label(frm, text="Select one of the existing profiles").grid(column=0, row=0)
 		x = 1
 		for user in models.session.query(models.User):
 			ttk.Label(frm, text=user.user_name).grid(column=0, row=x)
 			ttk.Button(frm, text="Select", command=lambda user=user:[task_window.destroy(), parent.destroy(), self.assign_current_user(user), self.user_assign_bad_date()]).grid(column=1, row=x)
 			x += 1
+
+		# quit buton returns to root window
 		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), parent.deiconify()]).grid(column=0, row=x)
+
+		# protocol for X button in window
 		task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.destroy()])
 
 
 	def create_user_window(self, parent: Toplevel) -> None:
+		'''
+		Window for entering infomation to create user entry in DB, 
+		infomation passed to create_user function.
+		'''
+		# create window object
 		task_window = Toplevel(self.root)
+
+		# define window geometry and create window Frame
 		self.win_geometry(300, 400, task_window)
 		frm = ttk.Frame(task_window, padding=10)
 		frm.grid()
+
+		# create StringVar objects to capture user input
 		new_user_name = StringVar()
 		new_user_email = StringVar()
+
+		# define label and entry boxes for information
 		ttk.Label(frm, text="Enter a new profile name").grid(column=0, row=0)
 		ttk.Entry(frm, textvariable=new_user_name).grid(column=1, row=0)
 		ttk.Label(frm, text="Enter a your email address").grid(column=0, row=1)
 		ttk.Entry(frm, textvariable=new_user_email).grid(column=1, row=1)
+
+		# confirm button to progress to creating user, return to return to parent window
 		ttk.Button(frm, text="Confirm", command=lambda:[task_window.withdraw(), parent.destroy(), self.create_user(new_user_name.get(), new_user_email.get(), task_window), self.user_assign_bad_date()]).grid(column=0, row=2)
 		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), parent.deiconify()]).grid(column=1, row=2)
+		
+		# protocol for X button in window
 		task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.destroy()])
 
 	
 	def create_user(self, new_user_name: str, new_user_email: str, parent: Toplevel) -> None:
+		'''
+		Creates new user if parameters meet requirements, then destroys parent window to leave only root window.
+		'''
+		# catch if either param string empty, unhides parent window and returns
 		if not new_user_name or not new_user_email:
 			messagebox.showinfo(message="You need to enter both a user name and an email address")
 			parent.deiconify()
 			return
+		# catch for user with the same name already existing, unhides parent window and returns
 		for user in models.session.query(models.User):
 			if user.user_name == new_user_name:
 				messagebox.showinfo(message="Profile of same name already found, profile has not been created")
 				parent.deiconify()
 				return
+			
+		# destroy parent window
 		parent.destroy()
+
+		# create new User object
 		new_user = models.User(user_name=new_user_name, user_email=new_user_email)
+
+		# add and commit it to session
 		models.session.add(new_user)
 		models.session.commit()
+
+		# feedback to user
 		messagebox.showinfo(message="Profile created!")
+
+		# assign created user as current user
 		self.assign_current_user(new_user)
 
 
 	def edit_delete_user_window(self) -> None:
+		'''
+		Window gives option to edit or delete existing users,
+		calling edit_user and delete_user respectively.
+		'''
+		# create window object
 		task_window = Toplevel(self.root)
+
+		# define window geometry and create window Frame
 		self.win_geometry(300, 400, task_window)
 		frm = ttk.Frame(task_window, padding=10)
 		frm.grid()
+
+		# define label objects, iterate through existing users assigning them to label and button objects with incrementing grid positioning
 		ttk.Label(frm, text="Select a profile to Delete or Edit").grid(column=0, row=0)
 		x = 1
 		for user in models.session.query(models.User):
 			ttk.Label(frm, text=user.user_name).grid(column=0, row=x)
 			ttk.Button(frm, text="Delete", command=lambda user=user:[task_window.withdraw(), self.delete_user(user, task_window)]).grid(column=1, row=x)
-			ttk.Button(frm, text="Edit", command=lambda user=user:[task_window.withdraw(), self.edit_user_new_value_window(user, task_window)]).grid(column=1, row=x)
+			ttk.Button(frm, text="Edit", command=lambda user=user:[task_window.withdraw(), self.edit_user(user, task_window)]).grid(column=1, row=x)
 			x += 1
+
+		# quit buton returns to root window	
 		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.root.deiconify()]).grid(column=0, row=x)
+
+		# protocol for X button in window
 		task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.deiconify()])
 
 
 	def delete_user(self, user: models.User, parent: Toplevel) -> None:
+		'''
+		Deletes user DB entry if confirmed by user destroying parent window and unhiding root,
+		if not confirmed unhides parent window.
+		'''
+		# messagebox confirming user deletion
 		confirm = messagebox.askyesno(message=f"Are you sure you want to delete user profile: '{user.user_name}'", title="Delete profile?")
 		if confirm:
+
+			# destroy parent window
 			parent.destroy()
+
+			# if user is current_user deselect it to avoid issues
 			if user == self.current_user:
 				self.deselect_current_user()
+
+			# delete user and commit session changes
 			models.session.delete(user)
 			models.session.commit()
+
+			# feedback to user
 			messagebox.showinfo(message="Profile deleted")
+
+			# if current user unhide root window, else open select or create user window
 			if self.current_user:
 				self.root.deiconify()
 			else:
@@ -207,41 +296,71 @@ class OrganiserApp():
 			self.return_win(parent)
 
 
-	def edit_user_new_value_window(self, user: models.User, parent: Toplevel) -> None:
+	def edit_user(self, user: models.User, parent: Toplevel) -> None:
+		'''
+		Window for entering infomation to edit user entry in DB, 
+		infomation passed to confirm_edit_user function.
+		'''
+		# create window object
 		task_window = Toplevel(self.root)
+
+		# define window geometry and create window Frame
 		self.win_geometry(300, 400, task_window)
 		frm = ttk.Frame(task_window, padding=10)
 		frm.grid()
+
+		# create StringVar objects to capture user input
 		edited_user_name = StringVar()
 		edited_user_email = StringVar()
+
+		# define label and entry boxes for information
 		ttk.Label(frm, text="Enter new values in any field you wish to edit, otherwise leave them blank").grid(column=0, row=0)
 		ttk.Label(frm, text=f"Current User name: {user.user_name}").grid(column=0, row=1)
 		ttk.Entry(frm, textvariable=edited_user_name).grid(column=1, row=1)
 		ttk.Label(frm, text=f"Current User email: {user.user_email}").grid(column=0, row=2)
 		ttk.Entry(frm, textvariable=edited_user_email).grid(column=1, row=2)
-		ttk.Button(frm, text="Confirm", command=lambda:[parent.withdraw(), task_window.withdraw(), self.confirm_edit_user(edited_user_name, edited_user_email, user, task_window, parent)]).grid(column=0, row=4)
+
+		# confirm button to progress to editing user, return to return to parent window
+		ttk.Button(frm, text="Confirm", command=lambda:[parent.withdraw(), task_window.withdraw(), self.confirm_edit_user(edited_user_name.get(), edited_user_email.get(), user, task_window, parent)]).grid(column=0, row=4)
 		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=1, row=4)
+		
+		# protocol for X button in window
 		task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
 	
-	def confirm_edit_user(self, edited_user_name: StringVar, edited_user_email: StringVar, user_to_edit: models.User, parent: Toplevel, grandparent: Toplevel) -> None:
-		if edited_user_name.get():
-			user_name = edited_user_name.get()
+	def confirm_edit_user(self, edited_user_name: str, edited_user_email: str, user_to_edit: models.User, parent: Toplevel, grandparent: Toplevel) -> None:
+		'''
+		Edits user DB entry if confirmed by user destroying parent window and unhiding root,
+		if not confirmed unhides parent window.
+		'''
+		# if strings not empty assign to variable else assign current user entry value to that variable
+		if edited_user_name:
+			user_name = edited_user_name
 		else:
 			user_name = user_to_edit.user_name
-		if edited_user_email.get():
-			user_email = edited_user_email.get()
+		if edited_user_email:
+			user_email = edited_user_email
 		else:
 			user_email = user_to_edit.user_email
+
+		# messagebox confirming edit and displaying what new values will be
 		confirm = messagebox.askyesno(message=f"If you confirm this edit the new user values will be:\nUser name: {user_name}, User email: {user_email}", title="Edit user?")
 		if confirm:
+
+			# destroy all windows other than root
 			parent.destroy()
 			grandparent.destroy()
+
+			# if current user is being edited, deselect to avoid issues
 			if user_to_edit == self.current_user:
 				self.deselect_current_user()
+
+			# assign new values and commit to session
 			user_to_edit.user_name = user_name
 			user_to_edit.user_email = user_email
 			models.session.commit()
+
+			# unhide root window
 			self.root.deiconify()
 		else:
 			self.return_win(parent)
