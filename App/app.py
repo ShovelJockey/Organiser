@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, _Time, _Date, time
+from datetime import datetime, date, time
 from models import models
 from tkinter import Tk, ttk, Toplevel, StringVar, messagebox
 from tkcalendar import Calendar
@@ -80,7 +80,7 @@ class OrganiserApp():
 		cal.bind("<<CalendarSelected>>", pass_date)
 
 		# protocol for X button in window
-		cal_window.protocol("WM_DELETE_WINDOW", lambda:[cal_window.destroy(), self.root.destroy()])
+		cal_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(cal_window))
 
 
 	def cal_tasks(self, str_date: str, tasks_str: StringVar) -> None:
@@ -135,7 +135,7 @@ class OrganiserApp():
 				ttk.Label(frm, text="No user profiles detected please create a new profile").grid(column=0, row=0, padx=5, pady=5)
 				ttk.Button(frm, text="Create new profile", command=lambda:[task_window.withdraw(), self.create_user_window(task_window)]).grid(column=0, row=1, padx=5, pady=5)
 
-			# quit buton returns to root window
+			# quit buton returns ends program
 			ttk.Button(frm, text="Quit", command=lambda:[task_window.destroy(), self.root.destroy()]).grid(column=0, row=6, padx=5, pady=5)
 
 			# protocol for X button in window
@@ -258,10 +258,10 @@ class OrganiserApp():
 			x += 1
 
 		# quit buton returns to root window	
-		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.root.deiconify()]).grid(column=0, row=x)
+		ttk.Button(frm, text="Return", command=lambda:self.on_closing(task_window)).grid(column=0, row=x)
 
 		# protocol for X button in window
-		task_window.protocol("WM_DELETE_WINDOW", lambda:[task_window.destroy(), self.root.deiconify()])
+		task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
 
 	def delete_user(self, user: models.User, parent: Toplevel) -> None:
@@ -391,7 +391,7 @@ class OrganiserApp():
 			ttk.Label(frm, text="Currently no tasks for this profile").grid(column=0, row=0)
 
 		# quit buton returns to root window	
-		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.root.deiconify()]).grid(column=0, row=x)
+		ttk.Button(frm, text="Return", command=lambda:self.on_closing(task_window)).grid(column=0, row=x)
 
 		# protocol for X button in window
 		task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
@@ -717,9 +717,9 @@ class OrganiserApp():
 
 ## Functions not for task or user creation/editing/deletion ##
 
-	def date_clean(self, date_str: str)  -> None | _Date:
+	def date_clean(self, date_str: str)  -> None | date:
 		'''
-		Takes string as arguement and iterates through 4 accepted date format trying to successfully format into a _Date type.
+		Takes string as arguement and iterates through 4 accepted date format trying to successfully format into a date object.
 		If no format will produce valid date then returns None.
 		'''
 		# iterate over format strings
@@ -735,9 +735,9 @@ class OrganiserApp():
 		return None
 
 
-	def time_clean(self, time_str: str) -> None | _Time:
+	def time_clean(self, time_str: str) -> None | time:
 		'''
-		Takes string as arguement and tries to format into _Time type with "%H:%M" format.
+		Takes string as arguement and tries to format into time object with "%H:%M" format.
 		If ValueError raised return None.
 		'''
 		try:
