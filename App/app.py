@@ -292,7 +292,7 @@ class OrganiserApp():
 			else:
 				self.user_select_create_window()
 		else:
-			self.return_win(parent)
+			self.return_to_prev_window(parent)
 
 
 	def edit_user(self, user: models.User, parent: Toplevel) -> None:
@@ -321,7 +321,7 @@ class OrganiserApp():
 
 		# confirm button to progress to editing user pass value of StringVars as strings to confirm_edit_user function, return to return to parent window
 		ttk.Button(frm, text="Confirm", command=lambda:[parent.withdraw(), task_window.withdraw(), self.confirm_edit_user(edited_user_name.get(), edited_user_email.get(), user, task_window, parent)]).grid(column=0, row=4)
-		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=1, row=4)
+		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_to_prev_window(parent)]).grid(column=1, row=4)
 		
 		# protocol for X button in window
 		task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
@@ -361,7 +361,7 @@ class OrganiserApp():
 			# unhide root window
 			self.root.deiconify()
 		else:
-			self.return_win(parent)
+			self.return_to_prev_window(parent)
 
 
 ## Task table functions ##
@@ -438,7 +438,7 @@ class OrganiserApp():
 
 			# confirm button to progress to comfirming task creation pass value of StringVars as strings to confirm_add function, return to return to parent window
 			ttk.Button(frm, text="Confirm", command=lambda:[task_window.withdraw(), self.confirm_add(new_task_type.get(), new_task_description.get(), new_task_date.get(), new_task_time.get(), task_window, parent)]).grid(column=0, row=5)
-			ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=1, row=5)
+			ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_to_prev_window(parent)]).grid(column=1, row=5)
 			
 			# protocol for X button in window
 			task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
@@ -495,7 +495,7 @@ class OrganiserApp():
 			# unhide grandparent window (root menu or calendar window)
 			grandparent.deiconify()
 		else:
-			self.return_win(parent)
+			self.return_to_prev_window(parent)
 
 
 	def edit_delete_task_window(self, parent: Toplevel, cal_date=None) -> None:
@@ -532,7 +532,7 @@ class OrganiserApp():
 				x +=1
 
 		# quit buton returns to root window
-		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=0, row=x)
+		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_to_prev_window(parent)]).grid(column=0, row=x)
 
 		# protocol for X button in window
 		task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
@@ -555,8 +555,8 @@ class OrganiserApp():
 			messagebox.showinfo(message="Task deleted!")
 
 			# check for tasks with 'bad' past dates that need amending or deleting
-			if self.bad_date_check():
-				self.amend_bad_dates()
+			if self.past_date_check():
+				self.amend_past_dates()
 			else:
 				# choice to return to amend/delete additional tasks
 				menu_select = messagebox.askyesno(message="Would you like to Edit or Delete additional tasks?", title="Return to Edit/Delete menu?")
@@ -566,7 +566,7 @@ class OrganiserApp():
 					# unhide grandparent (root menu or calendar window)
 					grandparent.deiconify()
 		else:
-			self.return_win(parent)
+			self.return_to_prev_window(parent)
 
 	
 	def edit_task(self, task: models.Task, parent: Toplevel, grandparent: Toplevel) -> None:
@@ -607,7 +607,7 @@ class OrganiserApp():
 
 		# confirm button to progress to comfirming task creation pass value of StringVars as strings to confirm_add function, return to return to parent window
 		ttk.Button(frm, text="Confirm", command=lambda:[parent.destroy(), task_window.withdraw(), self.confirm_edit_task(edited_task_type.get(), edited_task_description.get(), edited_task_date.get(), edited_task_time.get(), task, task_window, grandparent)]).grid(column=0, row=5)
-		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=1, row=5)
+		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_to_prev_window(parent)]).grid(column=1, row=5)
 
 		# protocol for X button in window
 		task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
@@ -676,68 +676,106 @@ class OrganiserApp():
 			messagebox.showinfo(message="Task edited!")
 
 			# check for tasks with 'bad' past dates that need amending or deleting
-			if self.bad_date_check():
-				self.amend_bad_dates()
+			if self.past_date_check():
+				self.amend_past_dates()
 			else:
 				# unhide grandparent (root menu or calendar window)
 				origin_window.deiconify()
 		else:
-			self.return_win(parent)
+			self.return_to_prev_window(parent)
 
 
-## Functions not for task or user creation/editing/deletion ##
-
-	def date_clean(self, date: str)  -> None | _Date:
-		for fmt in ["%d-%m-%Y", "%d.%m.%Y", "%d/%m/%Y", "%d %m %Y"]:
-			try:
-				date_object = datetime.strptime(date, fmt).date()
-			except ValueError:
-				continue
-			else:
-				return date_object
-		return None
-
-
-	def time_clean(self, time: str) -> None | _Time:
-		try:
-			time_object = datetime.strptime(time, "%H:%M").time()
-		except ValueError:
-			return None
-		else:
-			return time_object
-
-
-	def bad_date_check(self)  -> None | bool:
-		if self.current_user != None:
-			current_date = datetime.now()
-			if (self.current_user.tasks.filter((models.Task.deadline.isnot(None)) & (models.Task.deadline < current_date))).count() != 0:
-				return True
-				
-
-	def amend_bad_dates(self) -> None:
+	def amend_past_dates(self) -> None:
+		'''
+		Window displaying all past dates giving users option of editing task to have future date or deleting the task.
+		Can call edit_task and delete_task.
+		'''
 		current_date = datetime.now()
+
+		# hide root
 		self.root.withdraw()
+
+		# create window object
 		task_window = Toplevel(self.root)
+
+		# define window geometry and create window Frame
 		self.win_geometry(300, 400, task_window)
 		frm = ttk.Frame(task_window, padding=10)
 		frm.grid()
+
+		# iteratively create labels and buttons for each task with past date
 		x = 0
 		for reminder in self.current_user.tasks.filter((models.Task.deadline.isnot(None)) & (models.Task.deadline < current_date)):
 			ttk.Label(frm, text=f"{reminder.description} is scheduled to have already happened would you like to delete or edit this entry?").grid(column=0, row=x)
 			ttk.Button(frm, text="Edit task", command=lambda:[task_window.withdraw(), self.edit_task(reminder, task_window, self.root)]).grid(column=1, row=x)
 			ttk.Button(frm, text="Delete task", command=lambda:[task_window.withdraw(), self.delete_task(reminder, task_window, self.root)]).grid(column=2, row=x)
 			x +=1
+
+		# protocol for X button in window
 		task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
 
+## Functions not for task or user creation/editing/deletion ##
+
+	def date_clean(self, date_str: str)  -> None | _Date:
+		'''
+		Takes string as arguement and iterates through 4 accepted date format trying to successfully format into a _Date type.
+		If no format will produce valid date then returns None.
+		'''
+		# iterate over format strings
+		for fmt in ["%d-%m-%Y", "%d.%m.%Y", "%d/%m/%Y", "%d %m %Y"]:
+			# try each format execepting value error and returning upon valid date
+			try:
+				date_object = datetime.strptime(date_str, fmt).date()
+			except ValueError:
+				continue
+			else:
+				return date_object
+		# if ValueError raised each time return None
+		return None
+
+
+	def time_clean(self, time_str: str) -> None | _Time:
+		'''
+		Takes string as arguement and tries to format into _Time type with "%H:%M" format.
+		If ValueError raised return None.
+		'''
+		try:
+			time_object = datetime.strptime(time_str, "%H:%M").time()
+		except ValueError:
+			return None
+		else:
+			return time_object
+
+
+	def past_date_check(self)  -> bool:
+		'''
+		If self.current_user, filters user tasks for past dates.
+		Returns False if no current user or bool of whether query is empty.
+		'''
+		if self.current_user != None:
+			current_date = datetime.now()
+			return (self.current_user.tasks.filter((models.Task.deadline.isnot(None)) & (models.Task.deadline < current_date))).count() != 0
+		else:
+			return False
+
+
 	def user_assign_bad_date(self) -> None:
-		if self.bad_date_check():
-			self.amend_bad_dates()
+		'''
+		Checks for past dates calling amend_past_dates if True,
+		otherwise unhides root menu window.
+		'''
+		if self.past_date_check():
+			self.amend_past_dates()
 		else:
 			self.root.deiconify()
 
 
-	def return_win(self, current_parent: Toplevel) -> None:
+	def return_to_prev_window(self, current_parent: Toplevel) -> None:
+		'''
+		If current_parent a window object exists, unhides this window,
+		otherwise unhides root menu window.
+		'''
 		if current_parent:
 			current_parent.deiconify()
 		else:
@@ -745,11 +783,21 @@ class OrganiserApp():
 
 
 	def on_closing(self, current_window: Toplevel) -> None:
+		'''
+		Defines window protocol when using close X in window.
+		Destroys current window and unhides root menu window.
+		'''
 		current_window.destroy()
 		self.root.deiconify()
 
 
 	def simple_date(self, deadline: datetime) -> str:
+		'''
+		Takes datetime as arguement and formats it into string.
+		If datetime time is default 0:0:0 then only format date information into string.
+		returns string of datetime or "No deadline" if deadline parameter None.
+		'''
+		# for DB entries with None deadline
 		if not deadline:
 			return "No deadline"
 		if deadline.time() == time(0,0,0):
@@ -760,20 +808,27 @@ class OrganiserApp():
 
 	
 	def assign_current_user(self, user: models.User) -> None:
+		'''
+		Takes models.User sqlalchemy class as parameter and assigns it as current user,
+		also updating root menu windows displayed current user.
+		'''
 		self.current_user = user
-		self.profile_name_update()
+		self.current_profile_name.set(self.current_user.user_name)
 		
 
 	def deselect_current_user(self) -> None:
+		'''
+		Deselects current user and sets profile name to none.
+		'''
 		self.current_user = None
-
-
-	def profile_name_update(self) -> None:
-		if self.current_user:
-			self.current_profile_name.set(self.current_user.user_name)
+		self.current_profile_name.set("None")
 
 
 	def win_geometry(self, width: int, height: int, window: Toplevel) -> None:
+		'''
+		Takes: ints of width and height and a window object as arguements.
+		Uses ints to calculate window object size and position relative to root window.
+		'''
 		sw = self.root.winfo_screenwidth()
 		sh = self.root.winfo_screenheight()
 		x = (sw/2) - (width/2)
