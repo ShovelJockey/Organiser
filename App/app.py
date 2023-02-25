@@ -30,14 +30,13 @@ class OrganiserApp():
 		ttk.Label(frm, text="Welcome to my organiser app").grid(column=0, row=0, padx=5, pady=5)
 		ttk.Label(frm, text="Current profile:").grid(column=0, row=1, padx=5, pady=5)
 		ttk.Label(frm, textvariable=self.current_profile_name).grid(column=1, row=1, padx=5, pady=5)
-		ttk.Button(frm, text="Show tasks", command=lambda:[self.root.withdraw(), self.show_task()]).grid(column=0, row=2, padx=5, pady=5)
-		ttk.Button(frm, text="Show all urgent tasks", command=lambda:[self.root.withdraw(), self.urgent_task()]).grid(column=0, row=3, padx=5, pady=5)
-		ttk.Button(frm, text="Calendar", command=lambda:[self.root.withdraw(), self.calendar_view()]).grid(column=0, row=4, padx=5, pady=5)
-		ttk.Button(frm, text="Add a new task", command=lambda:[self.root.withdraw(), self.add_task_window(self.root)]).grid(column=0, row=5, padx=5, pady=5)
-		ttk.Button(frm, text="Delete or Edit a task", command=lambda:[self.root.withdraw(), self.edit_delete_task_window(self.root)]).grid(column=0, row=6, padx=5, pady=5)
-		ttk.Button(frm, text="Select or Create new profile", command=lambda:[self.deselect_current_user(), self.user_select_create_window()]).grid(column=0, row=7, padx=5, pady=5)
-		ttk.Button(frm, text="Delete or Edit existing profile", command=lambda:[self.root.withdraw(), self.edit_delete_user_window()]).grid(column=0, row=8, padx=5, pady=5)
-		ttk.Button(frm, text="Quit", command=self.root.destroy).grid(column=0, row=9, padx=5, pady=5)
+		ttk.Button(frm, text="Show tasks", command=lambda:[self.root.withdraw(), self.show_tasks()]).grid(column=0, row=2, padx=5, pady=5)
+		ttk.Button(frm, text="Calendar", command=lambda:[self.root.withdraw(), self.calendar_view()]).grid(column=0, row=3, padx=5, pady=5)
+		ttk.Button(frm, text="Add a new task", command=lambda:[self.root.withdraw(), self.add_task_window(self.root)]).grid(column=0, row=4, padx=5, pady=5)
+		ttk.Button(frm, text="Delete or Edit a task", command=lambda:[self.root.withdraw(), self.edit_delete_task_window(self.root)]).grid(column=0, row=5, padx=5, pady=5)
+		ttk.Button(frm, text="Select or Create new profile", command=lambda:[self.deselect_current_user(), self.user_select_create_window()]).grid(column=0, row=6, padx=5, pady=5)
+		ttk.Button(frm, text="Delete or Edit existing profile", command=lambda:[self.root.withdraw(), self.edit_delete_user_window()]).grid(column=0, row=7, padx=5, pady=5)
+		ttk.Button(frm, text="Quit", command=self.root.destroy).grid(column=0, row=8, padx=5, pady=5)
 		
 		# protocol for X button in top window
 		self.root.protocol("WM_DELETE_WINDOW", lambda:[self.root.destroy()])
@@ -114,7 +113,6 @@ class OrganiserApp():
 		'''
 		# if no assigned user
 		if self.current_user == None:
-
 			# withdraw root window
 			self.root.withdraw()
 
@@ -147,6 +145,7 @@ class OrganiserApp():
 	def select_user(self, parent: Toplevel) -> None:
 		'''
 		Window that displays current users available for selection.
+		Selected user sets user as self.current_user
 		'''
 		# create window object
 		task_window = Toplevel(self.root)
@@ -194,7 +193,7 @@ class OrganiserApp():
 		ttk.Label(frm, text="Enter a your email address").grid(column=0, row=1)
 		ttk.Entry(frm, textvariable=new_user_email).grid(column=1, row=1)
 
-		# confirm button to progress to creating user, return to return to parent window
+		# confirm button to progress to creating user pass value of StringVars as strings to create_user function, return to return to parent window
 		ttk.Button(frm, text="Confirm", command=lambda:[task_window.withdraw(), parent.destroy(), self.create_user(new_user_name.get(), new_user_email.get(), task_window), self.user_assign_bad_date()]).grid(column=0, row=2)
 		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), parent.deiconify()]).grid(column=1, row=2)
 		
@@ -211,6 +210,7 @@ class OrganiserApp():
 			messagebox.showinfo(message="You need to enter both a user name and an email address")
 			parent.deiconify()
 			return
+		
 		# catch for user with the same name already existing, unhides parent window and returns
 		for user in models.session.query(models.User):
 			if user.user_name == new_user_name:
@@ -272,7 +272,6 @@ class OrganiserApp():
 		# messagebox confirming user deletion
 		confirm = messagebox.askyesno(message=f"Are you sure you want to delete user profile: '{user.user_name}'", title="Delete profile?")
 		if confirm:
-
 			# destroy parent window
 			parent.destroy()
 
@@ -320,7 +319,7 @@ class OrganiserApp():
 		ttk.Label(frm, text=f"Current User email: {user.user_email}").grid(column=0, row=2)
 		ttk.Entry(frm, textvariable=edited_user_email).grid(column=1, row=2)
 
-		# confirm button to progress to editing user, return to return to parent window
+		# confirm button to progress to editing user pass value of StringVars as strings to confirm_edit_user function, return to return to parent window
 		ttk.Button(frm, text="Confirm", command=lambda:[parent.withdraw(), task_window.withdraw(), self.confirm_edit_user(edited_user_name.get(), edited_user_email.get(), user, task_window, parent)]).grid(column=0, row=4)
 		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=1, row=4)
 		
@@ -346,7 +345,6 @@ class OrganiserApp():
 		# messagebox confirming edit and displaying what new values will be
 		confirm = messagebox.askyesno(message=f"If you confirm this edit the new user values will be:\nUser name: {user_name}, User email: {user_email}", title="Edit user?")
 		if confirm:
-
 			# destroy all windows other than root
 			parent.destroy()
 			grandparent.destroy()
@@ -368,35 +366,66 @@ class OrganiserApp():
 
 ## Task table functions ##
 
-	def show_task(self) -> None:
+	def show_tasks(self) -> None:
+		'''
+		Window displaying tasks for currently selected user, 
+		gets all task entries with relationship to current user.
+		'''
+		# create window object
 		task_window = Toplevel(self.root)
+
+		# define window geometry and create window Frame
 		self.win_geometry(300, 400, task_window)
 		frm = ttk.Frame(task_window, padding=10)
 		frm.grid()
-		if self.current_user.tasks.count() == 0:
+
+		# if 1+ tasks associated with current user iterate through assigning string representation of entry to labels
+		if self.current_user.tasks.count() >= 0:
+			x = 1
+			for reminder in self.current_user.tasks:
+				ttk.Label(frm, text=reminder).grid(column=0, row=x)
+				x += 1
+
+		# else display no tasks label
+		else:
 			ttk.Label(frm, text="Currently no tasks for this profile").grid(column=0, row=0)
-		x = 1
-		for reminder in self.current_user.tasks:
-			ttk.Label(frm, text=reminder).grid(column=0, row=x)
-			x += 1
+
+		# quit buton returns to root window	
 		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.root.deiconify()]).grid(column=0, row=x)
+
+		# protocol for X button in window
 		task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 		
 
 	def add_task_window(self, parent: Toplevel, cal_deadline="") -> None:
+		'''
+		Window for adding tasks, can be accessed from root menu and calendar.
+		When accessed from Calendar window, passes cal_deadline parameter to function of selected date in calendar.
+		'''
+		# if cal_deadline returns valid datetime object, but is a past date unhide parent window
 		if self.date_clean(cal_deadline) and self.date_clean(cal_deadline) < datetime.now().date():
 			messagebox.showinfo(message="Sorry you can't add tasks with past dates")
 			parent.deiconify()
 		else:
+
+			# create window object
 			task_window = Toplevel(self.root)
+
+			# define window geometry and create window Frame
 			self.win_geometry(300, 400, task_window)
 			frm = ttk.Frame(task_window, padding=10)
 			frm.grid()
+
+			# create StringVar objects to capture user input
 			new_task_type = StringVar()
 			new_task_description = StringVar()
 			new_task_date = StringVar()
 			new_task_time = StringVar()
+
+			# set value = to cal_deadline, either string of date passed from calendar or empty string
 			new_task_date.set(cal_deadline)
+
+			# define label and entry boxes for information
 			ttk.Label(frm, text="Add a new task").grid(column=0, row=0)
 			ttk.Label(frm, text="Enter what type of task").grid(column=0, row=1)
 			ttk.Entry(frm, textvariable=new_task_type).grid(column=1, row=1)
@@ -406,97 +435,166 @@ class OrganiserApp():
 			ttk.Entry(frm, textvariable=new_task_date).grid(column=1, row=3)
 			ttk.Label(frm, text="Enter the task time, this is optional but requires a date. Enter time in 24 hour format ie 20:30").grid(column=0, row=4)
 			ttk.Entry(frm, textvariable=new_task_time).grid(column=1, row=4)
-			ttk.Button(frm, text="Confirm", command=lambda:[task_window.withdraw(), self.confirm_add(new_task_type, new_task_description, new_task_date, new_task_time, task_window, parent)]).grid(column=0, row=5)
+
+			# confirm button to progress to comfirming task creation pass value of StringVars as strings to confirm_add function, return to return to parent window
+			ttk.Button(frm, text="Confirm", command=lambda:[task_window.withdraw(), self.confirm_add(new_task_type.get(), new_task_description.get(), new_task_date.get(), new_task_time.get(), task_window, parent)]).grid(column=0, row=5)
 			ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=1, row=5)
+			
+			# protocol for X button in window
 			task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
 	
-	def confirm_add(self, new_task_type: StringVar, new_task_description: StringVar, new_task_date: StringVar, new_task_time: StringVar, parent: Toplevel, grandparent: Toplevel) -> None:
-
-		if not new_task_type.get() or not new_task_description.get():
+	def confirm_add(self, new_task_type: str, new_task_description: str, new_task_date: str, new_task_time: str, parent: Toplevel, grandparent: Toplevel) -> None:
+		'''
+		Checks user input will create valid SQL entry,
+		Confirms with user that entered information is correct before adding as new DB entry.
+		'''
+		# if task type or description are empty strings unhide parent window and return
+		if not new_task_type or not new_task_description:
 			messagebox.showinfo(message="Sorry both the task type and task description are needed to create a new task.\nPlease enter values for these fields")
 			parent.deiconify()
+			return
 
-		deadline = self.date_clean(new_task_date.get())
+		# if _Date object of string task date is past date unhide parent window and return
+		deadline = self.date_clean(new_task_date)
 		if deadline < datetime.now().date():
 			messagebox.showinfo(message="Sorry you can't add tasks with past dates")
 			parent.deiconify()
+			return
 
-		clean_time = self.time_clean(new_task_time.get())
+		# if valid task time but no valid date unhide parent and return
+		clean_time = self.time_clean(new_task_time)
 		if clean_time and not deadline:
 			messagebox.showinfo(message="Sorry you can't add tasks with a time but no valid date")
 			parent.deiconify()
+			return
+		
+		# if valid _Date deadline and _Time time then combine into datetime object
 		elif deadline and clean_time:
 			deadline = datetime.combine(deadline, clean_time)
+
+		# if valid _Date deadline and no time combine with default time into datetime object
 		elif deadline and not clean_time:
 			default_time = time(0,0,0)
 			deadline = datetime.combine(deadline, default_time)
 
-		confirm = messagebox.askyesno(message=f"You have entered {new_task_type.get()} for the task type, {new_task_description.get()} for the task description and {self.simple_date(deadline)} for the deadline. Is this correct?", title="check your info")
+		# check formatted data with user for confirmation
+		confirm = messagebox.askyesno(message=f"You have entered {new_task_type} for the task type, {new_task_description} for the task description and {self.simple_date(deadline)} for the deadline. Is this correct?", title="check your info")
 		if confirm:
-			new_task = models.Task(task_type = new_task_type.get(), description=new_task_description.get(), deadline=deadline, user_id=self.current_user.id)
+			# create Task object
+			new_task = models.Task(task_type = new_task_type, description=new_task_description, deadline=deadline, user_id=self.current_user.id)
+
+			# add and commit to DB session
 			models.session.add(new_task)
 			models.session.commit()
+
+			# destroy parent window
 			parent.destroy()
 			messagebox.showinfo(message="Task added!")
+
+			# unhide grandparent window (root menu or calendar window)
 			grandparent.deiconify()
 		else:
 			self.return_win(parent)
 
 
 	def edit_delete_task_window(self, parent: Toplevel, cal_date=None) -> None:
+		'''
+		Window displaying all tasks associated with current user with option to edit or delete.
+		Can be accessed from root menu and calendar window, from calendar window entries filtered by passed cal_date paremeter.
+		links through to edit or delete task windows.
+		'''
+		# create window object
 		task_window = Toplevel(self.root)
+
+		# define window geometry and create window Frame
 		self.win_geometry(300, 400, task_window)
 		frm = ttk.Frame(task_window, padding=10)
 		frm.grid()
+
 		ttk.Label(frm, text="Choose a task to delete").grid(column=0, row=0)
 		x = 1
+
+		# if accessed from root window display all tasks associated with current user
 		if cal_date is None:
 			for task in self.current_user.tasks:
 				ttk.Label(frm, text=task).grid(column=0, row=x)
 				ttk.Button(frm, text="Edit", command=lambda task=task:[task_window.withdraw(), self.edit_task(task, task_window, parent)]).grid(column=1, row=x)
 				ttk.Button(frm, text="Delete", command=lambda task=task:[task_window.withdraw(), self.delete_task(task, task_window, parent)]).grid(column=2, row=x)
 				x +=1
+
+		# if cal_date passed from calendar window filter tasks of current user for this date
 		else:
-			for task in self.current_user.tasks.filter(models.Task.deadline==cal_date):
+			for task in self.current_user.tasks.filter(models.Task.deadline.date()==cal_date):
 				ttk.Label(frm, text=task).grid(column=0, row=x)
 				ttk.Button(frm, text="Edit", command=lambda task=task:[task_window.withdraw(), self.edit_task(task, task_window, parent)]).grid(column=1, row=x)
 				ttk.Button(frm, text="Delete", command=lambda task=task:[task_window.withdraw(), self.delete_task(task, task_window, parent)]).grid(column=2, row=x)
 				x +=1
+
+		# quit buton returns to root window
 		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=0, row=x)
+
+		# protocol for X button in window
 		task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
 
 	def delete_task(self, task: models.Task, parent: Toplevel, grandparent: Toplevel) -> None:
+		'''
+		Deletes task DB entry if confirmed by user then either destroying window returning to root or to edit/delete task window,
+		if not confirmed unhides parent window.		
+		'''
 		confirm = messagebox.askyesno(message=f"You have selected '{task}' task to delete. Is this correct?", title="Delete task?")
 		if confirm:
+			# delete task entry and commit to session
 			models.session.delete(task)
 			models.session.commit()
+
+			# destroy parent window
 			parent.destroy()
+
 			messagebox.showinfo(message="Task deleted!")
+
+			# check for tasks with 'bad' past dates that need amending or deleting
 			if self.bad_date_check():
 				self.amend_bad_dates()
 			else:
+				# choice to return to amend/delete additional tasks
 				menu_select = messagebox.askyesno(message="Would you like to Edit or Delete additional tasks?", title="Return to Edit/Delete menu?")
 				if menu_select:
 					self.edit_delete_task_window(self.root)
 				else:
+					# unhide grandparent (root menu or calendar window)
 					grandparent.deiconify()
 		else:
 			self.return_win(parent)
 
 	
 	def edit_task(self, task: models.Task, parent: Toplevel, grandparent: Toplevel) -> None:
+		'''
+		Window for entering infomation to edit task entry in DB, 
+		infomation passed to confirm_edit_task function.
+		'''
+		# create window object
 		task_window = Toplevel(self.root)
+
+		# define window geometry and create window Frame
 		self.win_geometry(300, 400, task_window)
 		frm = ttk.Frame(task_window, padding=10)
 		frm.grid()
+
+		# create StringVar objects to capture user input/display current
 		edited_task_type = StringVar()
 		edited_task_description = StringVar()
 		edited_task_date = StringVar()
 		edited_task_time = StringVar()
+
+		# get string format of the task's current deadline date from datetime
 		current_task_date = task.deadline.date().strftime("%d/%m/%Y")
+
+		# get string format of the task's current deadline time from datetime
 		current_task_time = task.deadline.time().strftime("%H:%M")
+
+		# define label and entry boxes for information
 		ttk.Label(frm, text="Enter new values in any field you wish to edit, otherwise leave them blank").grid(column=0, row=0)
 		ttk.Label(frm, text=f"Current type of task: {task.task_type}").grid(column=0, row=1)
 		ttk.Entry(frm, textvariable=edited_task_type).grid(column=1, row=1)
@@ -506,74 +604,85 @@ class OrganiserApp():
 		ttk.Entry(frm, textvariable=edited_task_date).grid(column=1, row=3)
 		ttk.Label(frm, text=f"Current time: {current_task_time}").grid(column=0, row=4)
 		ttk.Entry(frm, textvariable=edited_task_time).grid(column=1, row=4)		
-		ttk.Button(frm, text="Confirm", command=lambda:[parent.destroy(), task_window.withdraw(), self.confirm_edit(edited_task_type, edited_task_description, edited_task_date, edited_task_time, task, task_window, grandparent)]).grid(column=0, row=5)
+
+		# confirm button to progress to comfirming task creation pass value of StringVars as strings to confirm_add function, return to return to parent window
+		ttk.Button(frm, text="Confirm", command=lambda:[parent.destroy(), task_window.withdraw(), self.confirm_edit_task(edited_task_type.get(), edited_task_description.get(), edited_task_date.get(), edited_task_time.get(), task, task_window, grandparent)]).grid(column=0, row=5)
 		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_win(parent)]).grid(column=1, row=5)
+
+		# protocol for X button in window
 		task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
 
-	def confirm_edit(self, edited_task_type: StringVar, edited_task_description: StringVar, edited_task_date: StringVar, edited_task_time: StringVar, task_to_edit: models.Task, parent: Toplevel, origin_window: Toplevel) -> None:# account for date -> datetime
-		date_object = self.date_clean(edited_task_date.get())
-		time_object = self.time_clean(edited_task_time.get())
+	def confirm_edit_task(self, edited_task_type: str, edited_task_description: str, edited_task_date: str, edited_task_time: str, task_to_edit: models.Task, parent: Toplevel, origin_window: Toplevel) -> None:# account for date -> datetime
+		'''
+		Edits task DB entry if confirmed by user destroying parent window and unhiding root,
+		if not confirmed unhides parent window.
+		'''
+		# get _Date and _Time objects from string representations
+		date_object = self.date_clean(edited_task_date)
+		time_object = self.time_clean(edited_task_time)
 
+		# if date object is past date unhide parent and return
 		if date_object and date_object < datetime.now().date():
 			messagebox.showinfo(message="Sorry you can't edit a deadline to be a past date")
 			parent.deiconify()
+			return
 		
+		# if valid _Date and _Time objects, combine into datetime object
 		if date_object and time_object:
 			deadline = datetime.combine(date_object, time_object)
+
+		# if valid _Date but no _Time object combine with current task _Time into datetime object
 		elif date_object and not time_object:
 			task_current_deadline = task_to_edit.deadline
 			deadline = datetime.combine(date_object, task_current_deadline.time())
+
+		# if valid _Time object but no _Date object combine with current task _Date into datetime object
 		elif not date_object and time_object:
 			task_current_deadline = task_to_edit.deadline
 			deadline = datetime.combine(task_current_deadline.date(), time_object)
+
+		# else get current deadline datetime
 		else:
 			deadline = task_to_edit.deadline
 
-		if edited_task_type.get():
-			type = edited_task_type.get()
+		# if new task type assign it to type var if not assign current task type to var
+		if edited_task_type:
+			type = edited_task_type
 		else:
 			type = task_to_edit.task_type
 
-		if edited_task_description.get():
-			description = edited_task_description.get()
+		# if new task description assign it to type var if not assign current task description to var
+		if edited_task_description:
+			description = edited_task_description
 		else:
 			description = task_to_edit.description
 
+		# confirm new values with user
 		confirm = messagebox.askyesno(message=f"If you confirm this edit the new task values will be:\nTask type: {type}, Description: {description}, Deadline: {self.simple_date(deadline)}", title="Edit task?")
-		if confirm:        
+		if confirm:
+
+			# assign variables as new task properties
 			task_to_edit.task_type = type
 			task_to_edit.description = description
 			task_to_edit.deadline = deadline
+
+			# commit to session
 			models.session.commit()
+
+			# destroy parent window
 			parent.destroy()
+
 			messagebox.showinfo(message="Task edited!")
+
+			# check for tasks with 'bad' past dates that need amending or deleting
 			if self.bad_date_check():
 				self.amend_bad_dates()
 			else:
+				# unhide grandparent (root menu or calendar window)
 				origin_window.deiconify()
 		else:
 			self.return_win(parent)
-
-
-	def urgent_task(self) -> None:# account for date -> datetime
-		urgent_time = datetime.now() + timedelta(days=3)
-		current_time = datetime.now()
-		task_window = Toplevel(self.root)
-		self.win_geometry(300, 400, task_window)
-		frm = ttk.Frame(task_window, padding=10)
-		frm.grid()
-		x = 0
-		urgent_tasks = self.current_user.tasks.filter((models.Task.deadline.isnot(None)) & (models.Task.deadline <= urgent_time))
-		if (urgent_tasks).count() != 0:
-			for reminder in urgent_tasks:
-				ttk.Label(frm, text=reminder).grid(column=0, row=x)
-				ttk.Label(frm, text=f"This is in {reminder.deadline - current_time}").grid(column=0, row=x+1)
-				x +=1
-		else:
-			ttk.Label(frm, text=f"No tasks have deadlines before {urgent_time}").grid(column=0, row=x)
-		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.root.deiconify()]).grid(column=0, row=x+2)
-		task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
 
 
 ## Functions not for task or user creation/editing/deletion ##
