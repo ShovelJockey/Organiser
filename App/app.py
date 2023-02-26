@@ -68,6 +68,9 @@ class OrganiserApp():
 		cal = Calendar(cal_window, selectmode="day", textvariable=date)
 		cal.pack()
 
+		# load tasks for default date opened on
+		pass_date(1)
+
 		# define labels and buttons
 		ttk.Label(cal_window, textvariable=date).pack(padx=10, pady=10)
 		ttk.Label(cal_window, text="Tasks for this date:").pack(padx=5, pady=5)
@@ -92,12 +95,15 @@ class OrganiserApp():
 		# convert string to datetime
 		date = datetime.strptime(str_date, "%d/%m/%Y").date()
 
-		# check if any tasks for date, if so iterate over concatenating task info into string
-		if self.current_user.tasks.filter(models.Task.deadline==date).count() > 0:
-			tasks = ""
-			for model in self.current_user.tasks.filter(models.Task.deadline==date):
-				tasks = tasks + "-" + model.task_type + ", " + model.description + "\n"
-		else:
+		tasks = ""
+
+		# iterate over concatenating task info into string if deadline date is today
+		for task in self.current_user.tasks:
+			if task.deadline.date() == date:
+				tasks = tasks + "-" + task.task_type + ", " + task.description + "\n"
+		
+		#if string is empty assign msg
+		if not tasks:
 			tasks = "No tasks"
 
 		# set value of StringVar
@@ -525,11 +531,12 @@ class OrganiserApp():
 
 		# if cal_date passed from calendar window filter tasks of current user for this date
 		else:
-			for task in self.current_user.tasks.filter(models.Task.deadline.date()==cal_date):
-				ttk.Label(frm, text=task).grid(column=0, row=x)
-				ttk.Button(frm, text="Edit", command=lambda task=task:[task_window.withdraw(), self.edit_task(task, task_window, parent)]).grid(column=1, row=x)
-				ttk.Button(frm, text="Delete", command=lambda task=task:[task_window.withdraw(), self.delete_task(task, task_window, parent)]).grid(column=2, row=x)
-				x +=1
+			for task in self.current_user.tasks:
+				if task.deadline.date() == cal_date:
+					ttk.Label(frm, text=task).grid(column=0, row=x)
+					ttk.Button(frm, text="Edit", command=lambda task=task:[task_window.withdraw(), self.edit_task(task, task_window, parent)]).grid(column=1, row=x)
+					ttk.Button(frm, text="Delete", command=lambda task=task:[task_window.withdraw(), self.delete_task(task, task_window, parent)]).grid(column=2, row=x)
+					x +=1
 
 		# quit buton returns to root window
 		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.return_to_prev_window(parent)]).grid(column=0, row=x)
