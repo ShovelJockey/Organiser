@@ -36,7 +36,10 @@ class Task(Base):
 
     def __repr__(self):
         if self.deadline:
-            deadline = self.deadline.strftime("%d/%m/%Y")
+            if self.deadline.hour != 0 and self.deadline.minute != 0:
+                deadline = self.deadline.strftime("%d/%m/%Y :: %H:%M")
+            else:
+                deadline = self.deadline.strftime("%d/%m/%Y")
             return f"Task type: {self.task_type}, Description of task: {self.description}, needs to be completed by: {deadline}  which is a {calendar.day_name[self.deadline.weekday()]}."
         else:
             return f"Task type: {self.task_type}, Description of task: {self.description}, this task has no deadline."
