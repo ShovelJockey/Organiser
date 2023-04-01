@@ -2,7 +2,7 @@ from subprocess import run
 import sys
 
 
-def sdm_customise_image(wpa_config_path: str, timezone: str, wifi_country: str, user_name: str, image_path: str) -> None:
+def sdm_customise_image(cscript_path: str, wpa_config_path: str, timezone: str, wifi_country: str, user_name: str, image_path: str) -> None:
     '''
     Makes edits to raspi image, these edits will be applied to all SD's flashed from this image.
 
@@ -13,7 +13,8 @@ def sdm_customise_image(wpa_config_path: str, timezone: str, wifi_country: str, 
     user_name, str : user name for all raspi on this system
     image_path, str : path to image to customise
     '''
-    shell_command = f'''sudo /usr/local/sdm/sdm --customize 
+    shell_command = f'''sudo /usr/local/sdm/sdm --customize
+                                                --cscript {cscript_path}
                                                 --wpa {wpa_config_path} 
                                                 --timezone {timezone} 
                                                 --wifi-country {wifi_country} 
