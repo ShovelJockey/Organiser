@@ -17,9 +17,10 @@ class User(Base):
     user_name = Column(String)
     user_email = Column(String)
     tasks = relationship("Task", backref="Users", cascade="all, delete, delete-orphan", lazy="dynamic", passive_deletes=True)
+    settings = relationship("Setting", backref="Settings", cascade="all, delete, delete-orphan", lazy="dynamic", passive_deletes=True)
 
 
-    def __repr__(self):
+    def __str__(self) -> str:
         return f"User name: {self.user_name}, User email: {self.user_email}"
 
 
@@ -31,10 +32,10 @@ class Task(Base):
     description = Column(String)
     deadline = Column(DateTime, nullable=True)
     user_id = Column(Integer, ForeignKey("Users.id"), nullable=False)
-    reminder_sent = Column(Boolean, default=False)
+    reminder_sent = Column(Integer, default=0)
 
 
-    def __repr__(self):
+    def __str__(self) -> str:
         if self.deadline:
             if self.deadline.hour != 0 and self.deadline.minute != 0:
                 deadline = self.deadline.strftime("%d/%m/%Y :: %H:%M")
@@ -43,6 +44,16 @@ class Task(Base):
             return f"Task type: {self.task_type}, Description of task: {self.description}, needs to be completed by: {deadline}  which is a {calendar.day_name[self.deadline.weekday()]}."
         else:
             return f"Task type: {self.task_type}, Description of task: {self.description}, this task has no deadline."
+
+
+class UserSettings(Base):
+    __tablename__ = "Settings"
+
+    id = Column(Integer, ForeignKey("Users.id"), primary_key=True)
+    reminder_offset = Column(Integer)
+    reminder_message = Column(String, nullable=True)
+    additional_reminder_offset = Column(Integer, default=0)
+    additional_reminder_message = Column(String, nullable=True)
 
 
 Base.metadata.create_all(engine)
