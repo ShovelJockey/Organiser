@@ -24,15 +24,34 @@ def check_deadlines() -> None:
     '''
     Query returing all tasks with deadlines in the next 24 hours that havent had reminders send and sends them.
     '''
-    tomorrow = datetime.now() + timedelta(days=1)
-    for task in models.session.query(models.Task).filter((models.Task.deadline.isnot(None)) & (models.Task.deadline <= tomorrow) & (models.Task.reminder_sent == False)):
+    for task in models.session.query(models.Task).filter(models.Task.deadline.isnot(None)):
+        user = models.session.query(models.User).filter(models.User.id == task.user_id).all()[0]
+
+        if task.reminder_sent == 0:
+            user_offset = task.deadline - timedelta(days=user.settings.reminder_offset)
+            if user.settings.reminder_message:
+                body = user.settings.reminder_message
+            else:
+                body = f"This is a gentle reminder that on {deadline} you have the task with the description: '{task.description}',\nwhich is tomorrow!"
+        
+        elif task.reminder_sent == 1 and user.settings.additional_reminder_delay > 0:
+            user_offset = task.deadline - timedelta(days=user.settings.additional_reminder_offset)
+            if user.settings.additional_reminder_message:
+                body = user.settings.additional_reminder_message
+            else:
+                body = f"This is a further gentle reminder that on {deadline} you have the task with the description: '{task.description}',\nwhich is tomorrow!"
+        
+        elif task.reminder_sent == 2 or (task.reminder_sent >= 1 and user.settings.additional_reminder_offset == 0):
+            continue
+
+        if datetime.now() > user_offset:
+            continue
+
         deadline = task.deadline.strftime("%d/%m/%Y")
         subject = "A gentle reminder"
-        body = f"This is a gentle reminder that on {deadline} you have the task with the description: '{task.description}',\nwhich is tomorrow!"
-        user = models.session.query(models.User).filter(models.User.id == task.user_id).all()[0]
         send_success = send_email(subject=subject, body=body, sender=sender_email, user_addr=user.user_email, password=password)
         if send_success:
-            task.reminder_sent = True
+            task.reminder_sent += 1
             models.session.commit()
             logger(task_id=task.id, success="sent")
         logger(task_id=task.id, success="error")
