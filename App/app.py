@@ -228,12 +228,17 @@ class OrganiserApp():
 		# destroy parent window
 		parent.destroy()
 
-		# create new User object and new UserSettings object
+		# create new User object
 		new_user = models.User(user_name=new_user_name, user_email=new_user_email)
-		new_user_settings = models.UserSettings()
 
 		# add and commit it to session
 		models.session.add(new_user)
+		models.session.commit()
+
+		# create new UserSettings object
+		new_user_settings = models.UserSettings(id=new_user.id)
+
+		# add and commit it to session
 		models.session.add(new_user_settings)
 		models.session.commit()
 
@@ -426,7 +431,7 @@ class OrganiserApp():
 		'''
 		
 		# messagebox asking user to confirm new values
-		confirm = messagebox(message=f"Confirm new settings for current user, new settings:\nReminder days before task: {user_offset}\nReminder message: {user_message}\nSecond reminder days before task: {user_second_offset}\nSecond reminder message: {user_second_message}")
+		confirm = messagebox.askyesno(message=f"Confirm new settings for current user, new settings:\nReminder days before task: {user_offset}\nReminder message: {user_message}\nSecond reminder days before task: {user_second_offset}\nSecond reminder message: {user_second_message}")
 		if confirm:
 			# destroy parent window
 			parent.destroy()
