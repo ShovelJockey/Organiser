@@ -1,6 +1,6 @@
 from datetime import datetime, date, time
 from models import models
-from tkinter import Tk, ttk, Toplevel, StringVar, messagebox
+from tkinter import Tk, ttk, Toplevel, StringVar, messagebox, Spinbox
 from tkcalendar import Calendar
 
 
@@ -36,7 +36,8 @@ class OrganiserApp():
 		ttk.Button(frm, text="Delete or Edit a task", command=lambda:[self.root.withdraw(), self.edit_delete_task_window(self.root)]).grid(column=0, row=5, padx=5, pady=5)
 		ttk.Button(frm, text="Select or Create new profile", command=lambda:[self.deselect_current_user(), self.user_select_create_window()]).grid(column=0, row=6, padx=5, pady=5)
 		ttk.Button(frm, text="Delete or Edit existing profile", command=lambda:[self.root.withdraw(), self.edit_delete_user_window()]).grid(column=0, row=7, padx=5, pady=5)
-		ttk.Button(frm, text="Quit", command=self.root.destroy).grid(column=0, row=8, padx=5, pady=5)
+		ttk.Button(frm, text="Setting for current profile", command=lambda:[self.root.withdraw(), self.show_user_settings()]).grid(column=0, row=8, padx=5, pady=5)
+		ttk.Button(frm, text="Quit", command=self.root.destroy).grid(column=0, row=9, padx=5, pady=5)
 		
 		# protocol for X button in top window
 		self.root.protocol("WM_DELETE_WINDOW", lambda:[self.root.destroy()])
@@ -227,11 +228,13 @@ class OrganiserApp():
 		# destroy parent window
 		parent.destroy()
 
-		# create new User object
+		# create new User object and new UserSettings object
 		new_user = models.User(user_name=new_user_name, user_email=new_user_email)
+		new_user_settings = models.UserSettings()
 
 		# add and commit it to session
 		models.session.add(new_user)
+		models.session.add(new_user_settings)
 		models.session.commit()
 
 		# feedback to user
@@ -367,6 +370,78 @@ class OrganiserApp():
 			# unhide root window
 			self.root.deiconify()
 		else:
+			self.return_to_prev_window(parent)
+
+
+## User Settings functions ##
+
+	def show_user_settings(self):
+		'''
+		Window displaying settings for currently seletected user,
+		gets UserSettings entry associated with current user.
+		'''
+		# create window object
+		task_window = Toplevel(self.root)
+
+		# define window geometry and create window Frame
+		self.win_geometry(300, 400, task_window)
+		frm = ttk.Frame(task_window, padding=10)
+		frm.grid()
+
+		# create stringvar objects to capture user input
+		user_message = StringVar()
+		user_offset = StringVar()
+		user_second_message = StringVar()
+		user_second_offset = StringVar()
+
+		# set default values for boxes to current db values
+		user_message.set(self.current_user.settings.reminder_message)
+		user_offset.set(str(self.current_user.settings.reminder_offset))
+		user_second_message.set(self.current_user.settings.additional_reminder_message)
+		user_second_offset.set(str(self.current_user.settings.additional_reminder_offset))
+
+		# define labels and entry boxes
+		ttk.Label(frm, text="Edit settings for current user").grid(column=0, row=0)
+		ttk.Label(frm, text="Days before task for reminder to be sent").grid(column=0, row=1)
+		ttk.Spinbox(frm, from_=0, to=10, textvariable=user_offset).grid(column=1, row=1)
+		ttk.Label(frm, text="Write a custom message for the reminder").grid(column=0, row=2)
+		ttk.Entry(frm, textvariable=user_message).grid(column=1, row=2)
+		ttk.Label(frm, text="Days before task for second reminder to be sent").grid(column=0, row=3)
+		ttk.Spinbox(frm, from_=0, to=10, textvariable=user_second_offset).grid(column=1, row=3)
+		ttk.Label(frm, text="Write a custom message for the second reminder").grid(column=0, row=4)
+		ttk.Entry(frm, textvariable=user_second_message).grid(column=1, row=4)
+
+		# confirm button to progress to editing user pass value of StringVars as strings to confirm_new_settings function, return to return to parent window
+		ttk.Button(frm, text="Confirm", command=lambda:[task_window.withdraw(), self.confirm_new_settings(int(user_offset.get()), user_message.get(), int(user_second_offset.get()), user_second_message.get(), task_window)]).grid(column=0, row=5)
+		ttk.Button(frm, text="Return", command=lambda:[task_window.destroy(), self.root.deiconify()]).grid(column=1, row=5)
+		
+		# protocol for X button in window
+		task_window.protocol("WM_DELETE_WINDOW", lambda:self.on_closing(task_window))
+
+		
+	def confirm_new_settings(self, user_offset: int, user_message: str, user_second_offset: int, user_second_message: str, parent: Toplevel):
+		'''
+		Commits edits to user settings db if confirmed by user, destroying parent and returning root window.
+		If not unhides parent window.
+		'''
+		
+		# messagebox asking user to confirm new values
+		confirm = messagebox(message=f"Confirm new settings for current user, new settings:\nReminder days before task: {user_offset}\nReminder message: {user_message}\nSecond reminder days before task: {user_second_offset}\nSecond reminder message: {user_second_message}")
+		if confirm:
+			# destroy parent window
+			parent.destroy()
+
+			# assign new values to settings fields and commit to db
+			self.current_user.settings.reminder_offset = user_offset
+			self.current_user.settings.reminder_message = user_message
+			self.current_user.settings.additional_reminder_offset = user_second_offset
+			self.current_user.settings.additional_reminder_message = user_second_message
+			models.session.commit()
+
+			# unhide root
+			self.root.deiconify()
+		else:
+			# unhide parent win
 			self.return_to_prev_window(parent)
 
 
