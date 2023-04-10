@@ -28,14 +28,14 @@ def check_deadlines() -> None:
         user = models.session.query(models.User).filter(models.User.id == task.user_id).all()[0]
 
         if task.reminder_sent == 0:
-            user_offset = task.deadline - timedelta(days=user.settings.reminder_offset)
+            reminder_send_date = task.deadline - timedelta(days=user.settings.reminder_offset)
             if user.settings.reminder_message:
                 body = user.settings.reminder_message
             else:
                 body = f"This is a gentle reminder that on {deadline} you have the task with the description: '{task.description}',\nwhich is tomorrow!"
         
-        elif task.reminder_sent == 1 and user.settings.additional_reminder_delay > 0:
-            user_offset = task.deadline - timedelta(days=user.settings.additional_reminder_offset)
+        elif task.reminder_sent == 1 and user.settings.additional_reminder_offset > 0:
+            reminder_send_date = task.deadline - timedelta(days=user.settings.additional_reminder_offset)
             if user.settings.additional_reminder_message:
                 body = user.settings.additional_reminder_message
             else:
@@ -44,7 +44,7 @@ def check_deadlines() -> None:
         elif task.reminder_sent == 2 or (task.reminder_sent >= 1 and user.settings.additional_reminder_offset == 0):
             continue
 
-        if datetime.now() > user_offset:
+        if datetime.now() < reminder_send_date:
             continue
 
         deadline = task.deadline.strftime("%d/%m/%Y")
