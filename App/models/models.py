@@ -17,7 +17,7 @@ class User(Base):
     user_name = Column(String)
     user_email = Column(String)
     tasks = relationship("Task", backref="Users", cascade="all, delete, delete-orphan", lazy="dynamic", passive_deletes=True)
-    settings = relationship("Setting", backref="Settings", cascade="all, delete, delete-orphan", lazy="dynamic", passive_deletes=True)
+    settings = relationship("UserSettings", backref="Users", cascade="all, delete, delete-orphan", uselist=False, passive_deletes=True)
 
 
     def __str__(self) -> str:
