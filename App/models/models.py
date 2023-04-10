@@ -51,9 +51,9 @@ class UserSettings(Base):
 
     id = Column(Integer, ForeignKey("Users.id"), primary_key=True)
     reminder_offset = Column(Integer, default=2)
-    reminder_message = Column(String, nullable=True)
+    reminder_message = Column(String, default='')
     additional_reminder_offset = Column(Integer, default=0)
-    additional_reminder_message = Column(String, nullable=True)
+    additional_reminder_message = Column(String, default='')
 
 
 Base.metadata.create_all(engine)
