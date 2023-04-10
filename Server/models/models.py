@@ -50,7 +50,7 @@ class UserSettings(Base):
     __tablename__ = "Settings"
 
     id = Column(Integer, ForeignKey("Users.id"), primary_key=True)
-    reminder_offset = Column(Integer)
+    reminder_offset = Column(Integer, default=2)
     reminder_message = Column(String, nullable=True)
     additional_reminder_offset = Column(Integer, default=0)
     additional_reminder_message = Column(String, nullable=True)
