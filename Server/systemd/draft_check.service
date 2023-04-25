@@ -4,7 +4,7 @@ StartLimitIntervalSec=0
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/bash /home/organiser/Server/draft_check.py
+ExecStart=/usr/bin/python3 /home/organiser/Server/send_reminder.py
 Restart=on-failure
 RestartSec=5
 User=root
