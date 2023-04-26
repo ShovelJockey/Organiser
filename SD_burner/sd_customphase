@@ -54,6 +54,7 @@ else
     #
     apt install -y python3-pip
     pip3 install SQLAlchemy
+    pip3 install psycopg2-binary
     #
     logfreespace "at end of $pfx Custom Phase post-install"
     logtoboth "* $pfx Custom Phase post-install Completed"
